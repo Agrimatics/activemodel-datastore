@@ -36,6 +36,10 @@ To start the local GCD server:
 To start the local web server:
 
     $ rails server
+    
+To view the local datastore development console:
+
+    http://localhost:8180/_ah/admin
 
 # Implementation
 The Gcloud::Datastore::Dataset is implemented in config/initializers/cloud_datastore.rb.
