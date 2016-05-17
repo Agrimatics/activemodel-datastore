@@ -16,5 +16,4 @@ class User
   def set_default_values
     self.enabled ||= true
   end
-
 end

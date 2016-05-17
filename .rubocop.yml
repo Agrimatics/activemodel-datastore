@@ -1,3 +1,16 @@
+AllCops:
+  TargetRubyVersion: 2.3
+  Exclude:
+    - "bin/**/*"
+    - "config/environments/**/*"
+    - "config/application.rb"
+    - "config/initializers/backtrace_silencers.rb"
+    - "config/initializers/session_store.rb"
+    - "vendor/**/*"
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 100
 
@@ -7,7 +20,7 @@ Metrics/ModuleLength:
 
 Metrics/ClassLength:
   CountComments: false
-  Max: 150
+  Max: 175
 
 Metrics/MethodLength:
   CountComments: false
