@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Integrates ActiveModel with the Google Gcloud::Datastore
 module ActiveModelCloudDatastore
   extend ActiveSupport::Concern
@@ -35,7 +37,7 @@ module ActiveModelCloudDatastore
   # @return [Entity] the updated Gcloud::Datastore::Entity
   def build_entity(parent = nil)
     entity = Gcloud::Datastore::Entity.new
-    entity.key = Gcloud::Datastore::Key.new self.class.name, id
+    entity.key = Gcloud::Datastore::Key.new(self.class.name, id)
     entity.key.parent = parent if parent
     attributes.each do |attr|
       entity[attr] = instance_variable_get("@#{attr}")
@@ -71,7 +73,7 @@ module ActiveModelCloudDatastore
 
   def destroy
     run_callbacks :destroy do
-      key = Gcloud::Datastore::Key.new self.class.name, id
+      key = Gcloud::Datastore::Key.new(self.class.name, id)
       self.class.retry_on_exception { CloudDatastore.dataset.delete(key) }
     end
   end
@@ -91,7 +93,7 @@ module ActiveModelCloudDatastore
       query.kind(name)
       query.ancestor(options[:ancestor]) if options[:ancestor]
       query_property_filter(query, options)
-      entities = CloudDatastore.dataset.run query
+      entities = log_gcloud_error { CloudDatastore.dataset.run(query) }
       from_entities(entities.flatten)
     end
 
@@ -106,7 +108,7 @@ module ActiveModelCloudDatastore
       next_cursor = nil
       query = build_query(options)
       if options[:limit]
-        entities = CloudDatastore.dataset.run query
+        entities = log_gcloud_error { CloudDatastore.dataset.run(query) }
         next_cursor = entities.cursor if entities.size == options[:limit]
       else
         batch_size = Rails.application.config_for(:settings)['batch_size']
@@ -124,9 +126,9 @@ module ActiveModelCloudDatastore
     #
     # @return [Entity, nil] a Gcloud::Datastore::Entity object or nil.
     def find_entity(id_or_name, parent = nil)
-      key = Gcloud::Datastore::Key.new name, id_or_name
+      key = Gcloud::Datastore::Key.new(name, id_or_name)
       key.parent = parent if parent
-      CloudDatastore.dataset.find key
+      CloudDatastore.dataset.find(key)
     end
 
     # Find object by ID.
@@ -156,7 +158,8 @@ module ActiveModelCloudDatastore
     def from_entity(entity)
       return if entity.nil?
       model_entity = new
-      model_entity.id = entity.key.id
+      model_entity.id = entity.key.id unless entity.key.id.nil?
+      model_entity.id = entity.key.name unless entity.key.name.nil?
       entity.properties.to_hash.each do |name, value|
         model_entity.send "#{name}=", value
       end
@@ -194,7 +197,8 @@ module ActiveModelCloudDatastore
       begin
         yield
       rescue => e
-        puts '!!!! Exception occurred, will retry: ' + e.message.to_s + ' !!!!'
+        puts "\e[33m[#{e.message.inspect}]\e[0m"
+        puts 'Rescued exception, retrying...'
         sleep sleep_time
         sleep_time *= 2
         retry_count += 1
@@ -202,6 +206,13 @@ module ActiveModelCloudDatastore
         retry
       end
       true
+    end
+
+    def log_gcloud_error
+      yield
+    rescue Gcloud::Error => e
+      puts "\e[33m[#{e.message.inspect}]\e[0m"
+      raise e
     end
 
     # private
@@ -242,7 +253,7 @@ module ActiveModelCloudDatastore
     def find_all(query, batch_size)
       entities = []
       loop do
-        results = CloudDatastore.dataset.run query
+        results = log_gcloud_error { CloudDatastore.dataset.run(query) }
         entities << results
         break if results.size < batch_size
         query.cursor(results.cursor)

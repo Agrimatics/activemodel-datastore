@@ -162,29 +162,28 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   test 'build query' do
     query = MockModel.build_query(kind: 'MockModel')
     assert query.class == Gcloud::Datastore::Query
-    proto = query.to_proto
-    assert proto.kind.name.include? 'MockModel'
-    assert_nil proto.filter
-    assert_nil proto.limit
-    assert_nil proto.start_cursor
-    assert_nil proto.projection
-    proto = MockModel.build_query(where: ['name', '=', 'something']).to_proto
-    refute_nil proto.filter
-    proto = MockModel.build_query(limit: 5).to_proto
-    refute_nil proto.limit
-    assert_equal 5, proto.limit
-    proto = MockModel.build_query(select: 'name').to_proto
-    refute_nil proto.projection
-    assert_equal 1, proto.projection.count
-    proto = MockModel.build_query(cursor: 'a_cursor').to_proto
-    refute_nil proto.start_cursor
+    grpc = query.to_grpc
+    assert_equal 'MockModel', grpc.kind[0].name
+    assert_nil grpc.filter
+    assert_nil grpc.limit
+    assert_equal '', grpc.start_cursor
+    assert_empty grpc.projection
+    grpc = MockModel.build_query(where: ['name', '=', 'something']).to_grpc
+    refute_nil grpc.filter
+    grpc = MockModel.build_query(limit: 5).to_grpc
+    refute_nil grpc.limit
+    assert_equal 5, grpc.limit.value
+    grpc = MockModel.build_query(select: 'name').to_grpc
+    refute_nil grpc.projection
+    assert_equal 1, grpc.projection.count
+    grpc = MockModel.build_query(cursor: 'a_cursor').to_grpc
+    refute_nil grpc.start_cursor
     parent_key = Gcloud::Datastore::Key.new 'ParentMockModel', MOCK_ACCOUNT_ID
-    proto = MockModel.build_query(ancestor: parent_key).to_proto
-    ancestor_filter = proto.filter.composite_filter.filter.first
+    grpc = MockModel.build_query(ancestor: parent_key).to_grpc
+    ancestor_filter = grpc.filter.composite_filter.filters.first
     assert_equal '__key__', ancestor_filter.property_filter.property.name
-    assert_equal Gcloud::Datastore::Proto::PropertyFilter::Operator::HAS_ANCESTOR,
-                 ancestor_filter.property_filter.operator
-    key = Gcloud::Datastore::Proto.from_proto_value(ancestor_filter.property_filter.value)
+    assert_equal :HAS_ANCESTOR, ancestor_filter.property_filter.op
+    key = ancestor_filter.property_filter.value.key_value.path[0]
     assert_equal parent_key.kind, key.kind
     assert_equal parent_key.id, key.id
     assert_equal parent_key.name, key.name

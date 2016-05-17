@@ -8,7 +8,8 @@ gem 'jquery-rails'
 gem 'turbolinks'
 gem 'jbuilder', '~> 2.0'
 
-gem 'gcloud', '0.7.2'
+gem 'gcloud', '0.9.0'
+gem 'puma', '~> 3.0'
 
 group :development, :test do
   gem 'byebug'

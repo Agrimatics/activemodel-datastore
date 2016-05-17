@@ -25,8 +25,9 @@ module ActiveSupport
   class TestCase
     def setup
       if `lsof -t -i TCP:8181`.to_i == 0
-        # Start the test Cloud Datastore
-        system('gcd.sh start --port=8181 --testing tmp/test_datastore&')
+        datastore_path = Rails.root.join('tmp', 'test_datastore')
+        # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
+        system('gcd.sh start --port=8181 --testing ' + datastore_path.to_s + '&')
         sleep 3
       end
     end

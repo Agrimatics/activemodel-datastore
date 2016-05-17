@@ -8,16 +8,18 @@ require 'gcloud/datastore'
 #   "client_email": "web-app@libra-pro.iam.gserviceaccount.com"
 # }'
 module CloudDatastore
+  if Rails.env.development?
+    ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8180'
+  elsif Rails.env.test?
+    ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8181'
+  else
+    ENV['GCLOUD_KEYFILE_JSON'] = '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
+      "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
+  end
+
   def self.dataset
     config = Rails.application.config.database_configuration[Rails.env]['dataset_id']
-    if Rails.env.development? or Rails.env.test?
-      require 'local_datastore_no_auth'
-      @dataset ||= Gcloud::Datastore::Dataset.new(config, Gcloud::Datastore::Credentials.new)
-    else
-      ENV['GCLOUD_KEYFILE_JSON'] = '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
-        "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
-      @dataset ||= Gcloud.datastore config
-    end
+    @dataset ||= Gcloud.datastore(config)
   end
 
   def self.reset_dataset
