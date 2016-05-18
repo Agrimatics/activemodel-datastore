@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require 'gcloud/datastore'
 
 # Integrates ActiveModel with the Google Gcloud::Datastore
 module ActiveModelCloudDatastore
