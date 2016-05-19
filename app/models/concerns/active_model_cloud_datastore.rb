@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-require File.join(Rails.root, 'lib', 'cloud_datastore', 'cloud_datastore')
 
 # Integrates ActiveModel with the Google Gcloud::Datastore
 module ActiveModelCloudDatastore

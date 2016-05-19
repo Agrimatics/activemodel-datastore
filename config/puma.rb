@@ -29,5 +29,5 @@ on_restart do
 end
 
 on_worker_boot do
-  CloudDatastore.reset_dataset
+  CloudDatastore.dataset
 end

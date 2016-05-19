@@ -8,10 +8,6 @@
 #   "client_email": "web-app@libra-pro.iam.gserviceaccount.com"
 # }'
 #
-# The way that the gRPC library within gcloud initializes does not persist properly across forks.
-# If you load it eagerly, you load it and then fork, so the sub-processes don't have correct
-# initialization. But if you fork and then load it in each worker, everything initializes correctly.
-#
 module CloudDatastore
   if Rails.env.development?
     ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8180'
@@ -23,6 +19,10 @@ module CloudDatastore
   end
 
   def self.dataset
+    # The way that the gRPC library within gcloud initializes does not persist properly across
+    # forks. If you load it eagerly, you load it and then fork, so the sub-processes don't have
+    # correct initialization. But if you fork and then load it in each worker, everything
+    # initializes correctly.
     require 'gcloud/datastore'
     config = Rails.application.config.database_configuration[Rails.env]['dataset_id']
     @dataset ||= Gcloud.datastore(config)
