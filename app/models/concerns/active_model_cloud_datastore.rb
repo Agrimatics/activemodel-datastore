@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-require 'gcloud/datastore'
+require File.join(Rails.root, 'lib', 'cloud_datastore', 'cloud_datastore')
 
 # Integrates ActiveModel with the Google Gcloud::Datastore
 module ActiveModelCloudDatastore
@@ -37,8 +37,7 @@ module ActiveModelCloudDatastore
   #
   # @return [Entity] the updated Gcloud::Datastore::Entity
   def build_entity(parent = nil)
-    entity = Gcloud::Datastore::Entity.new
-    entity.key = Gcloud::Datastore::Key.new(self.class.name, id)
+    entity = CloudDatastore.dataset.entity(self.class.name, id)
     entity.key.parent = parent if parent
     attributes.each do |attr|
       entity[attr] = instance_variable_get("@#{attr}")
@@ -74,7 +73,7 @@ module ActiveModelCloudDatastore
 
   def destroy
     run_callbacks :destroy do
-      key = Gcloud::Datastore::Key.new(self.class.name, id)
+      key = CloudDatastore.dataset.key(self.class.name, id)
       self.class.retry_on_exception { CloudDatastore.dataset.delete(key) }
     end
   end
@@ -90,8 +89,7 @@ module ActiveModelCloudDatastore
     #
     # @return [Array<Model>] an array of ActiveModel results.
     def all(options = {})
-      query = Gcloud::Datastore::Query.new
-      query.kind(name)
+      query = CloudDatastore.dataset.query(name)
       query.ancestor(options[:ancestor]) if options[:ancestor]
       query_property_filter(query, options)
       entities = log_gcloud_error { CloudDatastore.dataset.run(query) }
@@ -127,7 +125,7 @@ module ActiveModelCloudDatastore
     #
     # @return [Entity, nil] a Gcloud::Datastore::Entity object or nil.
     def find_entity(id_or_name, parent = nil)
-      key = Gcloud::Datastore::Key.new(name, id_or_name)
+      key = CloudDatastore.dataset.key(name, id_or_name)
       key.parent = parent if parent
       CloudDatastore.dataset.find(key)
     end
@@ -187,8 +185,7 @@ module ActiveModelCloudDatastore
     #
     # @return [Query] a gcloud datastore query.
     def build_query(options = {})
-      query = Gcloud::Datastore::Query.new
-      query.kind(name)
+      query = CloudDatastore.dataset.query(name)
       query_options(query, options)
     end
 

@@ -30,6 +30,7 @@ module ActiveSupport
         system('gcd.sh start --port=8181 --testing ' + datastore_path.to_s + '&')
         sleep 3
       end
+      CloudDatastore.dataset
     end
 
     def teardown

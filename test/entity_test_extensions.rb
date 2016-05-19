@@ -3,7 +3,7 @@ module EntityTestExtensions
   def delete_all_test_entities!
     entity_kinds = %w(MockModel)
     entity_kinds.each do |kind|
-      query = Gcloud::Datastore::Query.new.kind(kind)
+      query = CloudDatastore.dataset.query(kind)
       loop do
         entities = CloudDatastore.dataset.run(query)
         break if entities.empty?
@@ -15,10 +15,10 @@ module EntityTestExtensions
   # Defined as a bang method as it will create an entity in the datastore with whatever
   # attributes are provided (they are not validated).
   def create!(attributes)
-    entity = Gcloud::Datastore::Entity.new
-    key = Gcloud::Datastore::Key.new(name)
+    entity = CloudDatastore.dataset.entity
+    key = CloudDatastore.dataset.key(name)
     if attributes[:account_id]
-      key.parent = Gcloud::Datastore::Key.new('Parent' + name, attributes[:account_id].to_i)
+      key.parent = CloudDatastore.dataset.key('Parent' + name, attributes[:account_id].to_i)
       attributes.delete(:account_id)
     end
     entity.key = key
@@ -30,7 +30,7 @@ module EntityTestExtensions
   end
 
   def all_test_entities
-    query = Gcloud::Datastore::Query.new.kind(name)
+    query = CloudDatastore.dataset.query(name)
     CloudDatastore.dataset.run(query)
   end
 
