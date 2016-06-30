@@ -1,8 +1,0 @@
-development:
-  dataset_id: local-datastore
-
-test:
-  dataset_id: test-datastore
-
-production:
-  dataset_id: <%= ENV["GCLOUD_PROJECT"] %>

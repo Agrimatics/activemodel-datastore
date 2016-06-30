@@ -51,8 +51,6 @@ The Gcloud::Datastore::Dataset is implemented in config/initializers/cloud_datas
 
 The ActiveModel wrapper is implemented as a model concern, located in app/models/concerns.
 
-The database.yml contains the dataset_ids.
-
 # Tests
 The active-model-cloud-datastore concern has tests, run them with rake test.
 
