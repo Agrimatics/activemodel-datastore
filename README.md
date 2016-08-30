@@ -1,29 +1,25 @@
-# ActiveModel Gcloud Datastore example Rails app
-Example Rails app using the Google NoSQL Gcloud::Datastore. The rails app was generated with -O 
+# ActiveModel Google Cloud Datastore example Rails app
+Example Rails app using the Google::Cloud::Datastore. The rails app was generated with -O 
 to skip ActiveRecord.
 
 # Setup
 Install the Google Cloud SDK.
 
     $ curl https://sdk.cloud.google.com | bash
-    $ gcloud components install gcd-emulator
+    $ gcloud components install cloud-datastore-emulator 
     
-As of this release, the Datastore emulator that is part of the gcloud SDK is no longer 
-compatible with gcloud-ruby. This is because the gcloud SDK’s Datastore emulator does 
-not yet support gRPC as a transport layer.
+You can check the version of the SDK and the components installed with:
 
-A gRPC-compatible emulator is available until the gcloud SDK Datastore emulator supports gRPC. 
-To use it you must download the [gRPC emulator]
-(https://storage.googleapis.com/gcd/tools/gcd-grpc-1.0.0.zip)
-and put it in ~/google-cloud-datastore-emulator.
-
-Add the following line to your ~/.bash_profile:
+    $ gcloud components list
+    
+Add the following line to your ~/.bash_profile for the new emulator which supports gRPC and 
+Cloud Datastore API:
         
-    export PATH="~/google-cloud-datastore-emulator:$PATH"
+    export PATH="~/google-cloud-sdk/platform/cloud-datastore-emulator:$PATH"
         
 Restart your shell:
         
-    $ exec -l $SHELL   
+    exec -l $SHELL    
 
 To create the local development datastore execute the following from the root of the project:
 
@@ -47,7 +43,7 @@ To start the local web server:
     $ rails server
 
 # Implementation
-The Gcloud::Datastore::Dataset is implemented in config/initializers/cloud_datastore.rb.
+The Google::Cloud::Datastore::Dataset is implemented in config/initializers/cloud_datastore.rb.
 
 The ActiveModel wrapper is implemented as a model concern, located in app/models/concerns.
 

@@ -11,10 +11,19 @@ MOCK_ACCOUNT_ID = 1010101010101010
 class MockModel
   include ActiveModelCloudDatastore
   attr_accessor :name
+  attr_reader :role
   validates :name, presence: true
 
+  # ActiveModel::Dirty tracking
+  define_attribute_methods :role
+
+  def role=(val)
+    role_will_change! unless val == @role
+    @role = val
+  end
+
   def attributes
-    %w(name)
+    %w(name role)
   end
 end
 
@@ -25,9 +34,9 @@ module ActiveSupport
   class TestCase
     def setup
       if `lsof -t -i TCP:8181`.to_i == 0
-        datastore_path = Rails.root.join('tmp', 'test_datastore')
+        data_dir = Rails.root.join('tmp', 'test_datastore')
         # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
-        system('gcd.sh start --port=8181 --testing ' + datastore_path.to_s + '&')
+        system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
         sleep 3
       end
       CloudDatastore.dataset

@@ -1,14 +1,15 @@
 # frozen_string_literal: true
 
-# Integrates ActiveModel with the Google Gcloud::Datastore
+# Integrates ActiveModel with the Google::Cloud::Datastore
 module ActiveModelCloudDatastore
   extend ActiveSupport::Concern
   include ActiveModel::Model
+  include ActiveModel::Dirty
   include ActiveModel::Validations
   include ActiveModel::Validations::Callbacks
 
   included do
-    private_class_method :query_options, :query_sort, :query_property_filter, :find_all
+    private_class_method :query_options, :query_sort, :query_property_filter
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id
   end
@@ -20,6 +21,11 @@ module ActiveModelCloudDatastore
   # Used by ActiveModel for determining polymorphic routing.
   def persisted?
     id.present?
+  end
+
+  # Resets the ActiveModel::Dirty tracked changes
+  def reload!
+    clear_changes_information
   end
 
   # Updates attribute values on the ActiveModel::Model object with the provided params.
@@ -34,7 +40,7 @@ module ActiveModelCloudDatastore
 
   # Builds the Cloud Datastore entity with attributes from the Model object.
   #
-  # @return [Entity] the updated Gcloud::Datastore::Entity
+  # @return [Entity] the updated Google::Cloud::Datastore::Entity
   def build_entity(parent = nil)
     entity = CloudDatastore.dataset.entity(self.class.name, id)
     entity.key.parent = parent if parent
@@ -48,7 +54,7 @@ module ActiveModelCloudDatastore
     run_callbacks :save do
       if valid?
         entity = build_entity(parent)
-        success = self.class.retry_on_exception { CloudDatastore.dataset.save(entity) }
+        success = self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
         if success
           self.id = entity.key.id
           return true
@@ -63,7 +69,7 @@ module ActiveModelCloudDatastore
       update_model_attributes(params)
       if valid?
         entity = build_entity
-        self.class.retry_on_exception { CloudDatastore.dataset.save(entity) }
+        self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
       else
         false
       end
@@ -73,7 +79,7 @@ module ActiveModelCloudDatastore
   def destroy
     run_callbacks :destroy do
       key = CloudDatastore.dataset.key(self.class.name, id)
-      self.class.retry_on_exception { CloudDatastore.dataset.delete(key) }
+      self.class.retry_on_exception? { CloudDatastore.dataset.delete(key) }
     end
   end
 
@@ -83,7 +89,7 @@ module ActiveModelCloudDatastore
     #
     # @param [Hash] options the options to construct the query with.
     #
-    # @option options [Gcloud::Datastore::Key] :ancestor filter for results that inherit from a key
+    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for results that inherit from a key
     # @option options [Hash] :where filter, Array in the format [name, operator, value]
     #
     # @return [Array<Model>] an array of ActiveModel results.
@@ -91,7 +97,7 @@ module ActiveModelCloudDatastore
       query = CloudDatastore.dataset.query(name)
       query.ancestor(options[:ancestor]) if options[:ancestor]
       query_property_filter(query, options)
-      entities = log_gcloud_error { CloudDatastore.dataset.run(query) }
+      entities = retry_and_return { CloudDatastore.dataset.run(query) }
       from_entities(entities.flatten)
     end
 
@@ -106,12 +112,11 @@ module ActiveModelCloudDatastore
       next_cursor = nil
       query = build_query(options)
       if options[:limit]
-        entities = log_gcloud_error { CloudDatastore.dataset.run(query) }
+        entities = retry_and_return { CloudDatastore.dataset.run(query) }
         next_cursor = entities.cursor if entities.size == options[:limit]
       else
-        batch_size = Rails.application.config_for(:settings)['batch_size']
-        query.limit(batch_size)
-        entities = find_all(query, batch_size)
+        entities = retry_and_return { CloudDatastore.dataset.run(query) }
+        entities.all(request_limit: Rails.application.config_for(:settings)['batch_size'])
       end
       model_entities = from_entities(entities.flatten)
       return model_entities, next_cursor
@@ -120,13 +125,13 @@ module ActiveModelCloudDatastore
     # Retrieves an entity by key and by an optional parent.
     #
     # @param [Integer or String] id_or_name id or name value of the entity Key.
-    # @param [Gcloud::Datastore::Key] parent the parent Key of the entity.
+    # @param [Google::Cloud::Datastore::Key] parent the parent Key of the entity.
     #
-    # @return [Entity, nil] a Gcloud::Datastore::Entity object or nil.
+    # @return [Entity, nil] a Google::Cloud::Datastore::Entity object or nil.
     def find_entity(id_or_name, parent = nil)
       key = CloudDatastore.dataset.key(name, id_or_name)
       key.parent = parent if parent
-      CloudDatastore.dataset.find(key)
+      retry_and_return { CloudDatastore.dataset.find(key) }
     end
 
     # Find object by ID.
@@ -149,7 +154,7 @@ module ActiveModelCloudDatastore
       entities.map { |entity| from_entity(entity) }
     end
 
-    # Translates between Gcloud::Datastore::Entity objects and ActiveModel::Model objects.
+    # Translates between Google::Cloud::Datastore::Entity objects and ActiveModel::Model objects.
     #
     # @param [Entity] entity from Cloud Datastore
     # @return [Model] the translated ActiveModel object.
@@ -161,6 +166,7 @@ module ActiveModelCloudDatastore
       entity.properties.to_hash.each do |name, value|
         model_entity.send "#{name}=", value
       end
+      model_entity.reload!
       model_entity
     end
 
@@ -170,11 +176,11 @@ module ActiveModelCloudDatastore
       end
     end
 
-    # Constructs a Gcloud::Datastore::Query.
+    # Constructs a Google::Cloud::Datastore::Query.
     #
     # @param [Hash] options the options to construct the query with.
     #
-    # @option options [Gcloud::Datastore::Key] :ancestor filter for results that inherit from a key
+    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for results that inherit from a key
     # @option options [String] :cursor sets the cursor to start the results at
     # @option options [Integer] :limit sets a limit to the number of results to be returned
     # @option options [String] :order sort the results by property name
@@ -182,13 +188,13 @@ module ActiveModelCloudDatastore
     # @option options [Array] :select retrieve only select properties from the matched entities
     # @option options [Hash] :where filter, Array in the format [name, operator, value]
     #
-    # @return [Query] a gcloud datastore query.
+    # @return [Query] a datastore query.
     def build_query(options = {})
       query = CloudDatastore.dataset.query(name)
       query_options(query, options)
     end
 
-    def retry_on_exception
+    def retry_on_exception?
       retry_count = 0
       sleep_time = 0.5 # 0.5, 1, 2, 4 second between retries
       begin
@@ -205,9 +211,25 @@ module ActiveModelCloudDatastore
       true
     end
 
-    def log_gcloud_error
+    def retry_and_return
+      retry_count = 0
+      sleep_time = 0.5 # 0.5, 1, 2 second between retries
+      begin
+        yield
+      rescue => e
+        puts "\e[33m[#{e.message.inspect}]\e[0m"
+        puts 'Rescued exception, retrying...'
+        sleep sleep_time
+        sleep_time *= 2
+        retry_count += 1
+        raise e if retry_count > 2
+        retry
+      end
+    end
+
+    def log_google_cloud_error
       yield
-    rescue Gcloud::Error => e
+    rescue Google::Cloud::Error => e
       puts "\e[33m[#{e.message.inspect}]\e[0m"
       raise e
     end
@@ -245,17 +267,6 @@ module ActiveModelCloudDatastore
         end
       end
       query
-    end
-
-    def find_all(query, batch_size)
-      entities = []
-      loop do
-        results = log_gcloud_error { CloudDatastore.dataset.run(query) }
-        entities << results
-        break if results.size < batch_size
-        query.cursor(results.cursor)
-      end
-      entities
     end
   end
 end

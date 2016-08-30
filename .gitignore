@@ -12,5 +12,7 @@
 !/log/.keep
 /tmp
 
+/public/assets/*
+
 # RubyMine project files
 /.idea/*
