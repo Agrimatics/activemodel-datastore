@@ -1,3 +1,5 @@
+require 'google/cloud/datastore'
+
 # Returns a Google::Cloud::Datastore::Dataset object for the configured dataset.
 #
 # The dataset instance is used to create, read, update, and delete entity objects.
@@ -20,16 +22,8 @@ module CloudDatastore
       "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
   end
 
-  # The way that the gRPC library within google cloud initializes does not persist properly across
-  # forks. If you load it eagerly, you load it and then fork, so the sub-processes don't have
-  # correct initialization. But if you fork and then load it in each worker, everything
-  # initializes correctly. Creates one Gcloud gRPC client instance shared across all threads.
-  #
   def self.dataset
-    @dataset ||= begin
-      require 'google/cloud/datastore'
-      Google::Cloud.datastore(ENV['GCLOUD_PROJECT'])
-    end
+    @dataset ||= Google::Cloud.datastore(ENV['GCLOUD_PROJECT'])
   end
 
   def self.reset_dataset

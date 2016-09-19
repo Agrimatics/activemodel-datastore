@@ -23,11 +23,11 @@ Restart your shell:
 
 To create the local development datastore execute the following from the root of the project:
 
-    $ gcd.sh create tmp/local_datastore
+    $ cloud_datastore_emulator create tmp/local_datastore
     
 To create the local automated test datastore execute the following from the root of the project:
     
-    $ gcd.sh create tmp/test_datastore
+    $ cloud_datastore_emulator create tmp/test_datastore
     
 Install the Ruby on Rails dependencies:
 
@@ -36,7 +36,7 @@ Install the Ruby on Rails dependencies:
 # Running Locally
 To start the local GCD server:
 
-    $ gcd.sh start --port=8180 tmp/local_datastore
+    $ cloud_datastore_emulator start --port=8180 tmp/local_datastore
     
 To start the local web server:
 

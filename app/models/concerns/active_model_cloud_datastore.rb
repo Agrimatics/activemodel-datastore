@@ -89,7 +89,7 @@ module ActiveModelCloudDatastore
     #
     # @param [Hash] options the options to construct the query with.
     #
-    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for results that inherit from a key
+    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
     # @option options [Hash] :where filter, Array in the format [name, operator, value]
     #
     # @return [Array<Model>] an array of ActiveModel results.
@@ -97,7 +97,7 @@ module ActiveModelCloudDatastore
       query = CloudDatastore.dataset.query(name)
       query.ancestor(options[:ancestor]) if options[:ancestor]
       query_property_filter(query, options)
-      entities = retry_and_return { CloudDatastore.dataset.run(query) }
+      entities = retry_on_exception { CloudDatastore.dataset.run(query) }
       from_entities(entities.flatten)
     end
 
@@ -112,11 +112,11 @@ module ActiveModelCloudDatastore
       next_cursor = nil
       query = build_query(options)
       if options[:limit]
-        entities = retry_and_return { CloudDatastore.dataset.run(query) }
+        entities = retry_on_exception { CloudDatastore.dataset.run(query) }
         next_cursor = entities.cursor if entities.size == options[:limit]
       else
-        entities = retry_and_return { CloudDatastore.dataset.run(query) }
-        entities.all(request_limit: Rails.application.config_for(:settings)['batch_size'])
+        entities = retry_on_exception { CloudDatastore.dataset.run(query) }
+        entities.all(request_limit: Rails.configuration.settings['batch_size'])
       end
       model_entities = from_entities(entities.flatten)
       return model_entities, next_cursor
@@ -131,7 +131,7 @@ module ActiveModelCloudDatastore
     def find_entity(id_or_name, parent = nil)
       key = CloudDatastore.dataset.key(name, id_or_name)
       key.parent = parent if parent
-      retry_and_return { CloudDatastore.dataset.find(key) }
+      retry_on_exception { CloudDatastore.dataset.find(key) }
     end
 
     # Find object by ID.
@@ -180,7 +180,7 @@ module ActiveModelCloudDatastore
     #
     # @param [Hash] options the options to construct the query with.
     #
-    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for results that inherit from a key
+    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
     # @option options [String] :cursor sets the cursor to start the results at
     # @option options [Integer] :limit sets a limit to the number of results to be returned
     # @option options [String] :order sort the results by property name
@@ -211,9 +211,9 @@ module ActiveModelCloudDatastore
       true
     end
 
-    def retry_and_return
+    def retry_on_exception
       retry_count = 0
-      sleep_time = 0.5 # 0.5, 1, 2 second between retries
+      sleep_time = 0.5 # 0.5, 1, 2, 4 second between retries
       begin
         yield
       rescue => e
@@ -222,7 +222,7 @@ module ActiveModelCloudDatastore
         sleep sleep_time
         sleep_time *= 2
         retry_count += 1
-        raise e if retry_count > 2
+        raise e if retry_count > 3
         retry
       end
     end

@@ -16,12 +16,7 @@ module EntityTestExtensions
   # attributes are provided (they are not validated).
   def create!(attributes)
     entity = CloudDatastore.dataset.entity
-    key = CloudDatastore.dataset.key(name)
-    if attributes[:account_id]
-      key.parent = CloudDatastore.dataset.key('Parent' + name, attributes[:account_id].to_i)
-      attributes.delete(:account_id)
-    end
-    entity.key = key
+    entity.key = build_key(attributes)
     attributes.each do |attr_key, attr_val|
       entity[attr_key.to_s] = attr_val
     end
@@ -36,5 +31,14 @@ module EntityTestExtensions
 
   def count_test_entities
     all_test_entities.length
+  end
+
+  def build_key(attributes)
+    key = CloudDatastore.dataset.key(name)
+    if attributes[:account_id]
+      key.parent = CloudDatastore.dataset.key('Parent' + name, attributes[:account_id].to_i)
+      attributes.delete(:account_id)
+    end
+    key
   end
 end

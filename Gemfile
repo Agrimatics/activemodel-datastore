@@ -10,7 +10,7 @@ gem 'jquery-rails'
 gem 'turbolinks', '~> 5'
 gem 'jbuilder', '~> 2.5'
 
-gem 'google-cloud-datastore', '0.20.0'
+gem 'google-cloud-datastore', '0.20.1'
 gem 'puma', '3.6.0'
 gem 'rack-timeout'
 
@@ -21,6 +21,7 @@ end
 group :development do
   gem 'web-console'
   gem 'listen', '~> 3.0.5'
+  gem 'better_errors'
   gem 'spring'
   gem 'spring-watcher-listen', '~> 2.0.0'
   gem 'rubocop', require: false
