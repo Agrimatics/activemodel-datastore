@@ -1,9 +1,9 @@
 Active Model Google Cloud Datastore
 ===================================
 
-An example Rails app using[Active Model](https://github.com/rails/rails/tree/master/activemodel)and 
-the[Google Cloud client library for Ruby](https://github.com/GoogleCloudPlatform/google-cloud-ruby)with 
-the highly-scalable NoSQL database[Cloud Datastore.](https://cloud.google.com/datastore)The rails app was generated with -O to skip ActiveRecord and is configured to run on Heroku.
+An example Rails app using[Active Model](https://github.com/rails/rails/tree/master/activemodel) and 
+the [Google Cloud client library for Ruby](https://github.com/GoogleCloudPlatform/google-cloud-ruby) with 
+the highly-scalable NoSQL database[Cloud Datastore.](https://cloud.google.com/datastore) The rails app was generated with -O to skip ActiveRecord and is configured to run on Heroku.
 
 Development Environment
 -----------------------
