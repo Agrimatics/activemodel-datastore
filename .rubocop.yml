@@ -23,7 +23,7 @@ Metrics/LineLength:
 
 Metrics/ModuleLength:
   CountComments: false
-  Max: 140
+  Max: 150
 
 Metrics/ClassLength:
   CountComments: false

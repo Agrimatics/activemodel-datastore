@@ -12,17 +12,9 @@ MOCK_ACCOUNT_ID = 1010101010101010
 
 class MockModel
   include ActiveModelCloudDatastore
-  attr_accessor :name
-  attr_reader :role
+  attr_accessor :name, :role
   validates :name, presence: true
-
-  # ActiveModel::Dirty tracking
-  define_attribute_methods :role
-
-  def role=(val)
-    role_will_change! unless val == @role
-    @role = val
-  end
+  enable_change_tracking :name, :role
 
   def attributes
     %w(name role)

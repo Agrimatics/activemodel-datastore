@@ -80,6 +80,30 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
 
   # Class method tests.
 
+  test 'change tracking on new object' do
+    mock_model = MockModel.new
+    refute mock_model.changed?
+    mock_model.name = 'Bryce'
+    assert mock_model.changed?
+    assert mock_model.name_changed?
+    assert mock_model.name_changed?(from: nil, to: 'Bryce')
+    assert_nil mock_model.name_was
+    assert_equal [nil, 'Bryce'], mock_model.name_change
+    mock_model.name = 'Billy'
+    assert_equal [nil, 'Billy'], mock_model.name_change
+  end
+
+  test 'change tracking on existing object' do
+    create(:mock_model, name: 'Bryce')
+    mock_model = MockModel.all.first
+    refute mock_model.changed?
+    mock_model.name = 'Billy'
+    assert mock_model.changed?
+    assert mock_model.name_changed?
+    assert mock_model.name_changed?(from: 'Bryce', to: 'Billy')
+    assert_equal 'Bryce', mock_model.name_was
+  end
+
   test 'all' do
     parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
     15.times do

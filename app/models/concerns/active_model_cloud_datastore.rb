@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
-##
 # Integrates ActiveModel with the Google::Cloud::Datastore
-#
-# Created by Bryce McLean on 2016-04-06.
-#
 module ActiveModelCloudDatastore
   extend ActiveSupport::Concern
   include ActiveModel::Model
@@ -118,6 +114,20 @@ module ActiveModelCloudDatastore
 
   # Methods defined here will be class methods whenever we 'include DatastoreUtils'.
   module ClassMethods
+    ##
+    # Enables ActiveModel::Dirty track changes functionality for the provided object attributes.
+    #
+    def enable_change_tracking(*attributes)
+      attributes.collect!(&:to_sym).each do |attr|
+        define_attribute_methods attr
+
+        define_method("#{attr}=") do |value|
+          send("#{attr}_will_change!") unless value == instance_variable_get("@#{attr}")
+          instance_variable_set("@#{attr}", value)
+        end
+      end
+    end
+
     ##
     # Queries all objects from Cloud Datastore by named kind and using the provided options.
     #
