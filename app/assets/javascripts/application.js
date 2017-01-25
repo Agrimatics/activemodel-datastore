@@ -12,5 +12,8 @@
 //
 //= require jquery
 //= require jquery_ujs
+
+// Active Model Nested Attributes
+//= require active_model_nested_attr
+
 //= require turbolinks
-//= require_tree .

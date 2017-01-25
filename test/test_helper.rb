@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 ENV['RAILS_ENV'] ||= 'test'
 require File.expand_path('../../config/environment', __FILE__)
-require 'entity_test_extensions'
+require 'entity_class_method_extensions'
+require 'entity_instance_method_extensions'
 require 'rails/test_help'
 require 'minitest/reporters'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+FactoryGirl.find_definitions
 
 MOCK_ACCOUNT_ID = 1010101010101010
 
@@ -27,23 +29,42 @@ class MockModel
   end
 end
 
+class MockModelParent
+  include ActiveModelNestedAttr
+  attr_accessor :name
+  attr_accessor :mock_models
+end
+
 # Make the methods within EntityTestExtensions available as class methods.
-MockModel.send :extend, EntityTestExtensions
+MockModel.send :extend, EntityClassMethodExtensions
+MockModelParent.send :extend, EntityClassMethodExtensions
 
-module ActiveSupport
-  class TestCase
-    def setup
-      if `lsof -t -i TCP:8181`.to_i.zero?
-        data_dir = Rails.root.join('tmp', 'test_datastore')
-        # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
-        system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
-        sleep 3
-      end
-      CloudDatastore.dataset
+class ActiveSupport::TestCase
+  include FactoryGirl::Syntax::Methods
+
+  def setup
+    if `lsof -t -i TCP:8181`.to_i.zero?
+      data_dir = Rails.root.join('tmp', 'test_datastore')
+      # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
+      system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
+      sleep 3
     end
+    CloudDatastore.dataset
+  end
 
-    def teardown
-      MockModel.delete_all_test_entities!
+  def teardown
+    delete_all_test_entities!
+  end
+
+  def delete_all_test_entities!
+    entity_kinds = %w(MockModelParent MockModel)
+    entity_kinds.each do |kind|
+      query = CloudDatastore.dataset.query(kind)
+      loop do
+        entities = CloudDatastore.dataset.run(query)
+        break if entities.empty?
+        CloudDatastore.dataset.delete(*entities)
+      end
     end
   end
 end

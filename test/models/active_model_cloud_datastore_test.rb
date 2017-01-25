@@ -3,18 +3,19 @@ require 'test_helper'
 class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   # Instance method tests.
 
+  test 'attributes' do
+    class MockModelNoAttr
+      include ActiveModelCloudDatastore
+    end
+    mock_model = MockModelNoAttr.new
+    assert_equal [], mock_model.attributes
+  end
+
   test 'persisted?' do
     mock_model = MockModel.new
     refute mock_model.persisted?
     mock_model.id = 1
     assert mock_model.persisted?
-  end
-
-  test 'update model attributes' do
-    mock_model = MockModel.new
-    assert_nil mock_model.name
-    mock_model.update_model_attributes(name: 'Test')
-    assert_equal 'Test', mock_model.name
   end
 
   test 'build entity' do
@@ -61,7 +62,7 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   end
 
   test 'update' do
-    mock_model = MockModel.create! name: 'Update Test'
+    mock_model = create(:mock_model)
     id = mock_model.id
     count = MockModel.count_test_entities
     mock_model.update(name: 'different name')
@@ -71,7 +72,7 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   end
 
   test 'destroy' do
-    mock_model = MockModel.create! name: 'Destroy Test'
+    mock_model = create(:mock_model)
     count = MockModel.count_test_entities
     mock_model.destroy
     assert_equal count - 1, MockModel.count_test_entities
@@ -80,12 +81,13 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   # Class method tests.
 
   test 'all' do
-    parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_ACCOUNT_ID)
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
     15.times do
-      MockModel.create! name: Faker::Name.name, role: 1
+      create(:mock_model, name: Faker::Name.name)
     end
     15.times do
-      MockModel.create! name: Faker::Name.name, role: 0, account_id: MOCK_ACCOUNT_ID
+      mock_model = MockModel.new(attributes_for(:mock_model, name: Faker::Name.name))
+      mock_model.save(parent)
     end
     objects = MockModel.all
     assert_equal 30, objects.size
@@ -99,12 +101,14 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   end
 
   test 'find in batches' do
-    parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_ACCOUNT_ID)
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
     10.times do
-      MockModel.create! name: Faker::Name.name, account_id: MOCK_ACCOUNT_ID
+      mock_model = MockModel.new(attributes_for(:mock_model, name: Faker::Name.name))
+      mock_model.save(parent)
     end
-    mock_model = MockModel.create! name: 'MockModel', account_id: MOCK_ACCOUNT_ID
-    MockModel.create! name: 'MockModel No Ancestor'
+    mock_model = MockModel.new(attributes_for(:mock_model, name: 'MockModel'))
+    mock_model.save(parent)
+    create(:mock_model, name: 'MockModel No Ancestor')
     objects, _cursor = MockModel.find_in_batches
     assert_equal MockModel, objects.first.class
     assert_equal 12, objects.count
@@ -130,39 +134,90 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
   end
 
   test 'find entity' do
-    mock_model_1 = MockModel.create! name: 'Entity 1'
+    mock_model_1 = create(:mock_model, name: 'Entity 1')
     entity = MockModel.find_entity(mock_model_1.id)
     assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
     assert_equal 'Entity 1', entity.properties['name']
     assert_equal 'Entity 1', entity['name']
-    mock_model_2 = MockModel.create! name: 'Entity 2', account_id: MOCK_ACCOUNT_ID
+    assert_equal 'Entity 1', entity[:name]
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
+    mock_model_2 = MockModel.new(attributes_for(:mock_model, name: 'Entity 2'))
+    mock_model_2.save(parent)
     entity = MockModel.find_entity(mock_model_2.id)
     assert_nil entity
-    parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_ACCOUNT_ID)
     entity = MockModel.find_entity(mock_model_2.id, parent)
     assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
     assert_equal 'Entity 2', entity.properties['name']
   end
 
+  test 'find entities' do
+    mock_model_1 = create(:mock_model, name: 'Entity 1')
+    mock_model_2 = create(:mock_model, name: 'Entity 2')
+    entities = MockModel.find_entities(mock_model_1.id, mock_model_2.id)
+    assert_equal 2, entities.size
+    entities.each { |entity| assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect }
+    assert_equal 'Entity 1', entities[0][:name]
+    assert_equal 'Entity 2', entities[1][:name]
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
+    mock_model_3 = MockModel.new(attributes_for(:mock_model, name: 'Entity 3'))
+    mock_model_3.save(parent)
+    entities = MockModel.find_entities([mock_model_1.id, mock_model_2.id, mock_model_3.id])
+    assert_equal 2, entities.size
+    entities = MockModel.find_entities(mock_model_2.id, mock_model_3.id, parent: parent)
+    assert_equal 1, entities.size
+    assert_equal 'Entity 3', entities[0][:name]
+  end
+
   test 'find' do
-    mock_model = MockModel.create! name: 'Entity'
+    mock_model = create(:mock_model, name: 'Entity')
     model_entity = MockModel.find(mock_model.id)
     assert model_entity.is_a?(MockModel), model_entity.inspect
     assert_equal 'Entity', model_entity.name
   end
 
   test 'find by parent' do
-    parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_ACCOUNT_ID)
-    mock_model = MockModel.create! name: 'Entity With Parent', account_id: MOCK_ACCOUNT_ID
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
+    mock_model = MockModel.new(attributes_for(:mock_model, name: 'Entity With Parent'))
+    mock_model.save(parent)
     model_entity = MockModel.find_by_parent(mock_model.id, parent)
     assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert_equal 'Entity With Parent', model_entity.name
+  end
+
+  test 'find all by parent' do
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
+    mock_model_1 = MockModel.new(attributes_for(:mock_model, name: 'Entity 1 With Parent'))
+    mock_model_1.save(parent)
+    mock_model_2 = MockModel.new(attributes_for(:mock_model, name: 'Entity 2 With Parent'))
+    mock_model_2.save(parent)
+    model_entities = MockModel.find_all_by_parent([mock_model_1.id, mock_model_2.id], parent)
+    model_entities.each { |model| assert model.is_a?(MockModel), model.inspect }
+    assert_equal 'Entity 1 With Parent', model_entities[0].name
+    assert_equal 'Entity 2 With Parent', model_entities[1].name
+  end
+
+  test 'find by' do
+    model_entity = MockModel.find_by(name: 'Billy Bob')
+    assert_nil model_entity
+    create(:mock_model, name: 'Billy Bob')
+    model_entity = MockModel.find_by(name: 'Billy Bob')
+    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert_equal 'Billy Bob', model_entity.name
+    parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
+    mock_model_2 = MockModel.new(attributes_for(:mock_model, name: 'Entity With Parent'))
+    mock_model_2.save(parent)
+    model_entity = MockModel.find_by(name: 'Billy Bob')
+    assert_equal 'Billy Bob', model_entity.name
+    model_entity = MockModel.find_by(name: 'Billy Bob', ancestor: parent)
+    assert_nil model_entity
+    model_entity = MockModel.find_by(name: 'Entity With Parent', ancestor: parent)
     assert_equal 'Entity With Parent', model_entity.name
   end
 
   test 'from_entity' do
     entity = CloudDatastore.dataset.entity
     key = CloudDatastore.dataset.key('MockEntity', '12345')
-    key.parent = CloudDatastore.dataset.key('ParentMockEntity', 11111)
+    key.parent = CloudDatastore.dataset.key('Parent', 11111)
     entity.key = key
     entity['name'] = 'A Mock Entity'
     entity['role'] = 1
@@ -191,7 +246,7 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
     assert_equal 1, grpc.projection.count
     grpc = MockModel.build_query(cursor: 'a_cursor').to_grpc
     refute_nil grpc.start_cursor
-    parent_int_key = CloudDatastore.dataset.key('ParentMockModel', MOCK_ACCOUNT_ID)
+    parent_int_key = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
     grpc = MockModel.build_query(ancestor: parent_int_key).to_grpc
     ancestor_filter = grpc.filter.composite_filter.filters.first
     assert_equal '__key__', ancestor_filter.property_filter.property.name
@@ -200,7 +255,7 @@ class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
     assert_equal parent_int_key.kind, key.kind
     assert_equal parent_int_key.id, key.id
     assert_equal key.id_type, :id
-    parent_string_key = CloudDatastore.dataset.key('ParentMockModel', 'ABCDEF')
+    parent_string_key = CloudDatastore.dataset.key('Parent', 'ABCDEF')
     grpc = MockModel.build_query(ancestor: parent_string_key).to_grpc
     ancestor_filter = grpc.filter.composite_filter.filters.first
     key = ancestor_filter.property_filter.value.key_value.path[0]

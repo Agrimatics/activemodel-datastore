@@ -7,27 +7,42 @@ AllCops:
     - "config/initializers/backtrace_silencers.rb"
     - "config/initializers/session_store.rb"
     - "vendor/**/*"
+    - "Gemfile"
 
 Style/FrozenStringLiteralComment:
   Enabled: false
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: compact
+
+Style/EmptyMethod:
+  EnforcedStyle: expanded
 
 Metrics/LineLength:
   Max: 100
 
 Metrics/ModuleLength:
   CountComments: false
-  Max: 125
+  Max: 140
 
 Metrics/ClassLength:
   CountComments: false
   Max: 175
+  Exclude:
+    - "test/**/*"
 
 Metrics/MethodLength:
   CountComments: false
-  Max: 15
+  Max: 20
+
+Metrics/BlockLength:
+  Exclude:
+    - 'Rakefile'
+    - '**/*.rake'
+    - "test/**/*"
 
 Metrics/AbcSize:
-  Max: 20
+  Max: 25
 
 NumericLiterals:
   Enabled: false
@@ -37,3 +52,6 @@ Documentation:
 
 RedundantReturn:
   AllowMultipleReturnValues: true
+
+Style/VariableNumber:
+  Enabled: false
