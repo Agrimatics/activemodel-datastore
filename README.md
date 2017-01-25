@@ -18,7 +18,7 @@ You can check the version of the SDK and the components installed with:
     
 Install the Cloud Datastore Emulator, which provides local emulation of the production Cloud 
 Datastore environment and the gRPC API. However, you'll need to do a small amount of configuration 
-before running the application against the emulator, see[here.](https://cloud.google.com/datastore/docs/tools/datastore-emulator)
+before running the application against the emulator, see [here.](https://cloud.google.com/datastore/docs/tools/datastore-emulator)
     
     $ gcloud components install cloud-datastore-emulator 
     
