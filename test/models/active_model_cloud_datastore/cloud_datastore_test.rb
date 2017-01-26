@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class ActiveModelCloudDatastoreTest < ActiveSupport::TestCase
+class CloudDatastoreTest < ActiveSupport::TestCase
   # Instance method tests.
 
   test 'attributes' do

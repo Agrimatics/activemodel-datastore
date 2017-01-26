@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class ActiveModelNestedAttrTest < ActiveSupport::TestCase
+class NestedAttrTest < ActiveSupport::TestCase
   def setup
     super
     MockModelParent.clear_validators!

@@ -70,14 +70,11 @@ module ActiveModelCloudDatastore
   end
 
   def update(params)
+    assign_attributes(params)
+    return unless valid?
     run_callbacks :update do
-      assign_attributes(params)
-      if valid?
-        entity = build_entity
-        self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
-      else
-        false
-      end
+      entity = build_entity
+      self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
     end
   end
 
@@ -99,16 +96,12 @@ module ActiveModelCloudDatastore
   private
 
   def save_entity(parent = nil)
+    return unless valid?
     run_callbacks :save do
-      if valid?
-        entity = build_entity(parent)
-        success = self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
-        if success
-          self.id = entity.key.id
-          return true
-        end
-      end
-      false
+      entity = build_entity(parent)
+      success = self.class.retry_on_exception? { CloudDatastore.dataset.save(entity) }
+      self.id = entity.key.id if success
+      success
     end
   end
 
