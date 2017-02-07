@@ -13,6 +13,7 @@ module ActiveModelCloudDatastore
     private_class_method :query_options, :query_sort, :query_property_filter
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id
+    attr_writer :attributes_changed
   end
 
   def attributes
@@ -26,12 +27,54 @@ module ActiveModelCloudDatastore
     id.present?
   end
 
+  # -------------------------------- start track_changes.rb --------------------------------
+
   ##
   # Resets the ActiveModel::Dirty tracked changes
   #
   def reload!
     clear_changes_information
+    self.attributes_changed = nil
   end
+
+  ##
+  # For use with enable_change_tracking. Instance variable @attributes_changed is only
+  # set when attributes respond to attr_will_change! (ActiveModel::Dirty).
+  # See track_changes and enable_change_tracking methods.
+  #
+  # No change tracking:
+  # * @attributes_changed is nil, the object is valid to save.
+  #
+  # With change tracking enabled:
+  # * @attributes_changed true, the object is valid to save.
+  # * @attributes_changed false, the object is marked as excluded from saving.
+  #
+  def exclude_from_save?
+    @attributes_changed.nil? ? false : !@attributes_changed
+  end
+
+  ##
+  # Sets @attributes_changed based on the attribute values using ActiveModel::Dirty.
+  # For attributes enabled for change tracking compares changed values. All values
+  # submitted from an HTML form are strings, thus a String of 25.0 doesn't match an
+  # original Float of 25.0. Call this method after running valid? to allow for any
+  # type coercing needed in validation callbacks.
+  #
+  # For example, consider the scenario in which a form value is unchanged by the user:
+  # The initial value is a float, which during assign_attributes is set to a string and
+  # then coerced back to a float during a validation callback.
+  #
+  def track_changes
+    self.attributes_changed = true if marked_for_destruction?
+    attributes.each do |attr|
+      break if @attributes_changed
+      if respond_to?("#{attr}_will_change!") && send("#{attr}_changed?")
+        self.attributes_changed = send(attr) == send("#{attr}_was") ? false : true
+      end
+    end
+  end
+
+  # -------------------------------- end track_changes.rb --------------------------------
 
   ##
   # Builds the Cloud Datastore entity with attributes from the Model object.
@@ -83,14 +126,6 @@ module ActiveModelCloudDatastore
       key = CloudDatastore.dataset.key(self.class.name, id)
       self.class.retry_on_exception? { CloudDatastore.dataset.delete(key) }
     end
-  end
-
-  def capture_error_details(e)
-    return if Rails.env.test?
-    puts "\e[33m[#{e.message.inspect}]\e[0m"
-    puts "\e[33m[#{e.backtrace.join("\n")}]\e[0m"
-    message = 'Something went wrong while processing your request. Please try again.'
-    errors.add(:datastore_save, message)
   end
 
   private

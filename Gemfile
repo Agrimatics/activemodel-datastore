@@ -11,7 +11,7 @@ gem 'turbolinks', '~> 5'
 gem 'jbuilder', '~> 2.5'
 
 gem 'google-cloud-datastore', '0.23.0'
-gem 'puma', '3.6.2'
+gem 'puma', '3.7.0'
 gem 'rack-timeout'
 
 group :development, :test do
