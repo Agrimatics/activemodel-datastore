@@ -15,9 +15,9 @@ class NestedAttrTest < ActiveSupport::TestCase
     MockModelParent.validates_associated(:mock_models)
     @mock_model_parent.mock_models = [MockModel.new(name: 'M1'), MockModel.new(name: 'M2')]
     refute @mock_model_parent.nested_attributes?
-    @mock_model_parent.nested_attributes = :mock_model
+    @mock_model_parent.nested_attributes = :mock_models
     refute @mock_model_parent.nested_attributes?
-    @mock_model_parent.nested_attributes = [:mock_model]
+    @mock_model_parent.nested_attributes = [:mock_models]
     assert @mock_model_parent.nested_attributes?
   end
 

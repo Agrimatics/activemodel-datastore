@@ -12,11 +12,14 @@ module ActiveModelCloudDatastore
   included do
     private_class_method :query_options, :query_sort, :query_property_filter
     define_model_callbacks :save, :update, :destroy
-    attr_accessor :id
-    attr_writer :attributes_changed
+    attr_accessor :id, :exclude_from_save
   end
 
   def attributes
+    []
+  end
+
+  def tracked_attributes
     []
   end
 
@@ -34,43 +37,46 @@ module ActiveModelCloudDatastore
   #
   def reload!
     clear_changes_information
-    self.attributes_changed = nil
+    self.exclude_from_save = false
   end
 
-  ##
-  # For use with enable_change_tracking. Instance variable @attributes_changed is only
-  # set when attributes respond to attr_will_change! (ActiveModel::Dirty).
-  # See track_changes and enable_change_tracking methods.
-  #
-  # No change tracking:
-  # * @attributes_changed is nil, the object is valid to save.
-  #
-  # With change tracking enabled:
-  # * @attributes_changed true, the object is valid to save.
-  # * @attributes_changed false, the object is marked as excluded from saving.
-  #
   def exclude_from_save?
-    @attributes_changed.nil? ? false : !@attributes_changed
+    @exclude_from_save.nil? ? false : @exclude_from_save
   end
 
   ##
-  # Sets @attributes_changed based on the attribute values using ActiveModel::Dirty.
+  # Determines if any attribute values have changed using ActiveModel::Dirty.
   # For attributes enabled for change tracking compares changed values. All values
-  # submitted from an HTML form are strings, thus a String of 25.0 doesn't match an
-  # original Float of 25.0. Call this method after running valid? to allow for any
-  # type coercing needed in validation callbacks.
+  # submitted from an HTML form are strings, thus a string of 25.0 doesn't match an
+  # original float of 25.0. Call this method after valid? to allow for any type coercing
+  # occurring before saving to datastore.
   #
-  # For example, consider the scenario in which a form value is unchanged by the user:
+  # For example, consider the scenario in which the user submits an unchanged form value:
   # The initial value is a float, which during assign_attributes is set to a string and
   # then coerced back to a float during a validation callback.
   #
-  def track_changes
-    self.attributes_changed = true if marked_for_destruction?
-    attributes.each do |attr|
-      break if @attributes_changed
-      if respond_to?("#{attr}_will_change!") && send("#{attr}_changed?")
-        self.attributes_changed = send(attr) == send("#{attr}_was") ? false : true
+  # If none of the tracked attributes have changed, exclude_from_save is set to true.
+  #
+  def values_changed?
+    unless tracked_attributes.present?
+      raise TrackChangesError.new('Object has not been configured for change tracking.', self)
+    end
+    changed = marked_for_destruction? ? true : false
+    tracked_attributes.each do |attr|
+      break if changed
+      if send("#{attr}_changed?")
+        changed = send(attr) == send("#{attr}_was") ? false : true
       end
+    end
+    self.exclude_from_save = !changed
+    changed
+  end
+
+  def remove_unmodified_children
+    return unless tracked_attributes.present? && nested_attributes?
+    nested_attributes.each do |attr|
+      with_changes = Array(send(attr.to_sym)).select(&:values_changed?)
+      send("#{attr}=", with_changes)
     end
   end
 
@@ -105,11 +111,11 @@ module ActiveModelCloudDatastore
   #       parent = CloudDatastore.dataset.key('Parent' + self.class.name, account_id.to_i)
   #     end
   #     msg = 'Failed to save the entity'
-  #     save_entity(parent) || raise(ActiveModelCloudDatastore::EntityNotSaved.new(msg, self))
+  #     save_entity(parent) || raise(ActiveModelCloudDatastore::EntityNotSavedError.new(msg, self))
   #   end
   #
   def save!
-    save_entity || raise(EntityNotSaved.new('Failed to save the entity', self))
+    save_entity || raise(EntityNotSavedError.new('Failed to save the entity', self))
   end
 
   def update(params)
@@ -140,13 +146,24 @@ module ActiveModelCloudDatastore
     end
   end
 
-  # Methods defined here will be class methods whenever we 'include DatastoreUtils'.
+  # Methods defined here will be class methods whenever we 'include ActiveModelCloudDatastore'.
   module ClassMethods
     ##
-    # Enables ActiveModel::Dirty track changes functionality for the provided object attributes.
+    # Enables track changes functionality for the provided attributes using ActiveModel::Dirty.
+    #
+    # Calls define_attribute_methods for each attribute provided.
+    #
+    # Creates a setter for each attribute that will look something like this:
+    #   def name=(value)
+    #     name_will_change! unless value == @name
+    #     @name = value
+    #   end
+    #
+    # Overrides tracked_attributes to return an Array of the attributes configured for tracking.
     #
     def enable_change_tracking(*attributes)
-      attributes.collect!(&:to_sym).each do |attr|
+      attributes = attributes.collect(&:to_sym)
+      attributes.each do |attr|
         define_attribute_methods attr
 
         define_method("#{attr}=") do |value|
@@ -154,6 +171,8 @@ module ActiveModelCloudDatastore
           instance_variable_set("@#{attr}", value)
         end
       end
+
+      define_method('tracked_attributes') { attributes }
     end
 
     ##
@@ -404,16 +423,12 @@ module ActiveModelCloudDatastore
     end
   end
 
+  # -------------------------------- start errors.rb --------------------------------
+
   ##
   # Generic Active Model Cloud Datastore exception class.
   #
   class ActiveModelCloudDatastoreError < StandardError
-  end
-
-  ##
-  # Raised when a record is invalid and can not be saved.
-  #
-  class EntityNotSaved < ActiveModelCloudDatastoreError
     attr_reader :record
 
     def initialize(message = nil, record = nil)
@@ -422,4 +437,18 @@ module ActiveModelCloudDatastore
       super(message)
     end
   end
+
+  ##
+  # Raised when a record is invalid and can not be saved.
+  #
+  class EntityNotSavedError < ActiveModelCloudDatastoreError
+  end
+
+  ##
+  # Raised when a record is invalid and can not be saved.
+  #
+  class TrackChangesError < ActiveModelCloudDatastoreError
+  end
+
+  # --------------------------------- end errors.rb ---------------------------------
 end
