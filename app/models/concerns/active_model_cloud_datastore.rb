@@ -33,7 +33,7 @@ module ActiveModelCloudDatastore
   # -------------------------------- start track_changes.rb --------------------------------
 
   ##
-  # Resets the ActiveModel::Dirty tracked changes
+  # Resets the ActiveModel::Dirty tracked changes.
   #
   def reload!
     clear_changes_information
@@ -85,7 +85,7 @@ module ActiveModelCloudDatastore
   ##
   # Builds the Cloud Datastore entity with attributes from the Model object.
   #
-  # @return [Entity] the updated Google::Cloud::Datastore::Entity
+  # @return [Entity] The updated Google::Cloud::Datastore::Entity.
   #
   def build_entity(parent = nil)
     entity = CloudDatastore.dataset.entity(self.class.name, id)
@@ -178,12 +178,13 @@ module ActiveModelCloudDatastore
     ##
     # Queries all objects from Cloud Datastore by named kind and using the provided options.
     #
-    # @param [Hash] options the options to construct the query with.
+    # @param [Hash] options The options to construct the query with.
     #
-    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
-    # @option options [Hash] :where filter, Array in the format [name, operator, value]
+    # @option options [Google::Cloud::Datastore::Key] :ancestor Filter for inherited results.
+    # @option options [Array] :where Adds a property filter of arrays in the format
+    #   [name, operator, value].
     #
-    # @return [Array<Model>] an array of ActiveModel results.
+    # @return [Array<Model>] An array of ActiveModel results.
     #
     def all(options = {})
       query = CloudDatastore.dataset.query(name)
@@ -197,10 +198,10 @@ module ActiveModelCloudDatastore
     # Queries objects from Cloud Datastore in batches by named kind and using the provided options.
     # When a limit option is provided queries up to the limit and returns results with a cursor.
     #
-    # @param [Hash] options the options to construct the query with. See build_query for options.
+    # @param [Hash] options The options to construct the query with. See build_query for options.
     #
-    # @return [Array<Model>, String] an array of ActiveModel results and a cursor that can be used
-    # to query for additional results.
+    # @return [Array<Model>, String] An array of ActiveModel results and a cursor that can be used
+    #   to query for additional results.
     #
     def find_in_batches(options = {})
       next_cursor = nil
@@ -218,8 +219,8 @@ module ActiveModelCloudDatastore
     ##
     # Retrieves an entity by key and by an optional parent.
     #
-    # @param [Integer or String] id_or_name id or name value of the entity Key.
-    # @param [Google::Cloud::Datastore::Key] parent the parent Key of the entity.
+    # @param [Integer or String] id_or_name The id or name value of the entity Key.
+    # @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
     #
     # @return [Entity, nil] a Google::Cloud::Datastore::Entity object or nil.
     #
@@ -233,7 +234,7 @@ module ActiveModelCloudDatastore
     # Retrieves the entities for the provided ids by key and by an optional parent.
     #
     # @param [Array] ids An array of ids to retrieve.
-    # @param [Google::Cloud::Datastore::Key] parent the parent Key of the entity.
+    # @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
     #
     # @return [Array<Entity>] an array of Google::Cloud::Datastore::Entity objects.
     #
@@ -247,7 +248,7 @@ module ActiveModelCloudDatastore
     ##
     # Find object by ID.
     #
-    # @return [Model, nil] an ActiveModel object or nil.
+    # @return [Model, nil] An ActiveModel object or nil.
     #
     def find(id)
       entity = find_entity(id.to_i)
@@ -257,7 +258,7 @@ module ActiveModelCloudDatastore
     ##
     # Find object by parent and ID.
     #
-    # @return [Model, nil] an ActiveModel object or nil.
+    # @return [Model, nil] An ActiveModel object or nil.
     #
     def find_by_parent(id, parent)
       entity = find_entity(id.to_i, parent)
@@ -267,7 +268,7 @@ module ActiveModelCloudDatastore
     ##
     # Find objects by parent and an array of IDs.
     #
-    # @return [Array<Model>] an array of ActiveModel objects.
+    # @return [Array<Model>] An array of ActiveModel objects.
     #
     def find_all_by_parent(ids, parent)
       ids = ids.map(&:to_i)
@@ -278,13 +279,14 @@ module ActiveModelCloudDatastore
     ##
     # Finds the first entity matching the specified condition.
     #
-    # @param [Hash] args[0] in which the key is the property and the value is the value to look for.
+    # @param [Hash] args In which the key is the property and the value is the value to look for.
     # @option args [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
     #
-    # @return [Model, nil] an ActiveModel object or nil.
+    # @return [Model, nil] An ActiveModel object or nil.
     #
     # @example
     #   User.find_by(name: 'Joe')
+    #   User.find_by(name: 'Bryce', ancestor: parent)
     #
     def find_by(args)
       query = CloudDatastore.dataset.query(name)
@@ -302,8 +304,8 @@ module ActiveModelCloudDatastore
     ##
     # Translates between Google::Cloud::Datastore::Entity objects and ActiveModel::Model objects.
     #
-    # @param [Entity] entity from Cloud Datastore.
-    # @return [Model] the translated ActiveModel object.
+    # @param [Entity] entity Entity from Cloud Datastore.
+    # @return [Model] The translated ActiveModel object.
     #
     def from_entity(entity)
       return if entity.nil?
@@ -326,17 +328,18 @@ module ActiveModelCloudDatastore
     ##
     # Constructs a Google::Cloud::Datastore::Query.
     #
-    # @param [Hash] options the options to construct the query with.
+    # @param [Hash] options The options to construct the query with.
     #
-    # @option options [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
-    # @option options [String] :cursor sets the cursor to start the results at
-    # @option options [Integer] :limit sets a limit to the number of results to be returned
-    # @option options [String] :order sort the results by property name
-    # @option options [String] :desc_order sort the results by descending property name
-    # @option options [Array] :select retrieve only select properties from the matched entities
-    # @option options [Hash] :where filter, Array in the format [name, operator, value]
+    # @option options [Google::Cloud::Datastore::Key] :ancestor Filter for inherited results.
+    # @option options [String] :cursor Sets the cursor to start the results at.
+    # @option options [Integer] :limit Sets a limit to the number of results to be returned.
+    # @option options [String] :order Sort the results by property name.
+    # @option options [String] :desc_order Sort the results by descending property name.
+    # @option options [Array] :select Retrieve only select properties from the matched entities.
+    # @option options [Array] :where Adds a property filter of arrays in the format
+    #   [name, operator, value].
     #
-    # @return [Query] a datastore query.
+    # @return [Query] A datastore query.
     #
     def build_query(options = {})
       query = CloudDatastore.dataset.query(name)
@@ -406,7 +409,7 @@ module ActiveModelCloudDatastore
     ##
     # Adds property filters to the query if included in the options.
     # Accepts individual or nested Arrays:
-    # [['superseded', '=', false], ['email', '=', 'something']]
+    #   [['superseded', '=', false], ['email', '=', 'something']]
     #
     def query_property_filter(query, options)
       if options[:where]

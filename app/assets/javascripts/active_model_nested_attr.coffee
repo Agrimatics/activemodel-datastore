@@ -1,7 +1,7 @@
 $(document).on 'turbolinks:load', ->
   if $('.duplicatable_nested_form').length
 
-    formsOnPage = $('.duplicatable_nested_form').length
+    forms_on_page = $('.duplicatable_nested_form').length
 
     $('body').on 'click','.destroy_nested_form', (e) ->
       e.preventDefault()
@@ -16,29 +16,32 @@ $(document).on 'turbolinks:load', ->
 
     $('.insert_nested_form').click (e) ->
       e.preventDefault()
-      lastNestedForm = $('.duplicatable_nested_form').last()
-      newNestedForm = $(lastNestedForm).clone()
-      newNestedForm.show()
-      formsOnPage += 1
+      last_nested_form = $('.duplicatable_nested_form').last()
+      new_nested_form = $(last_nested_form).clone(true)
+      new_nested_form.show()
+      forms_on_page += 1
 
-      $(newNestedForm).find('label').each ->
-        oldLabel = $(this).attr 'for'
-        if oldLabel?
-          newLabel = oldLabel.replace(new RegExp(/_[0-9]+_/), "_#{formsOnPage - 1}_")
-          $(this).attr 'for', newLabel
+      $(new_nested_form).find('label').each ->
+        old_label = $(this).attr 'for'
+        if old_label?
+          new_label = old_label.replace(new RegExp(/_[0-9]+_/), "_#{forms_on_page - 1}_")
+          $(this).attr 'for', new_label
 
-      $(newNestedForm).find('select, input').each ->
+      $(new_nested_form).find('select, input').each ->
+        $(this).removeData()
         if $(this).is(':checkbox')
           $(this).prop('checked', false)
+        else if $(this).is('select')
+          $(this).find('option:eq(0)').prop('selected', true)
         else
           $(this).val('')
-        oldId = $(this).attr 'id'
-        if oldId?
-          newId = oldId.replace(new RegExp(/_[0-9]+_/), "_#{formsOnPage - 1}_")
-          $(this).attr 'id', newId
+        old_id = $(this).attr 'id'
+        if old_id?
+          new_id = old_id.replace(new RegExp(/_[0-9]+_/), "_#{forms_on_page - 1}_")
+          $(this).attr 'id', new_id
 
-        oldName = $(this).attr 'name'
-        newName = oldName.replace(new RegExp(/\[[0-9]+]/), "[#{formsOnPage - 1}]")
-        $(this).attr 'name', newName
+        old_name = $(this).attr 'name'
+        new_name = old_name.replace(new RegExp(/\[[0-9]+]/), "[#{forms_on_page - 1}]")
+        $(this).attr 'name', new_name
 
-      $(newNestedForm).insertAfter(lastNestedForm)
+      $(new_nested_form).insertAfter(last_nested_form)
