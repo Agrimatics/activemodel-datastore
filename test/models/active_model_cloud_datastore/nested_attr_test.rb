@@ -51,8 +51,7 @@ class NestedAttrTest < ActiveSupport::TestCase
 
   test 'assigns new nested objects with hash attributes' do
     assert_nil @mock_model_parent.nested_attributes
-    params = { '0' => { name: 'Mock Model 1', role: 0 },
-               '1' => { name: 'Mock Model 2', role: 1 } }
+    params = { '0' => { name: 'Mock Model 1', role: 0 }, '1' => { name: 'Mock Model 2', role: 1 } }
     @mock_model_parent.assign_nested_attributes(:mock_models, params)
     assert @mock_model_parent.mock_models.is_a? Array
     assert_equal 2, @mock_model_parent.mock_models.size
@@ -103,6 +102,22 @@ class NestedAttrTest < ActiveSupport::TestCase
     @mock_model_parent.assign_nested_attributes(:mock_models, params)
     mock_model_1 = @mock_model_parent.mock_models[0]
     refute mock_model_1.marked_for_destruction
+  end
+
+  test 'rejects new objects if proc supplied' do
+    @mock_model_parent.nested_attributes = nil
+    params = { '0' => { name: 'Mock Model 1', role: 0 }, '1' => { name: '', role: 1 } }
+    reject_proc = proc { |attributes| attributes['name'].blank? }
+    @mock_model_parent.assign_nested_attributes(:mock_models, params, reject_if: reject_proc)
+    assert_equal 1, @mock_model_parent.mock_models.size
+    assert_equal 'Mock Model 1', @mock_model_parent.mock_models[0].name
+  end
+
+  test 'rejects new objects with all_blank symbol' do
+    @mock_model_parent.nested_attributes = nil
+    params = { '0' => { name: '', role: nil }, '1' => { name: '', role: nil } }
+    @mock_model_parent.assign_nested_attributes(:mock_models, params, reject_if: :all_blank)
+    assert_equal 0, @mock_model_parent.mock_models.size
   end
 
   # Class method tests.

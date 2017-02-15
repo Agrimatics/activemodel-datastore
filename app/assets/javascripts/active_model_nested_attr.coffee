@@ -45,3 +45,10 @@ $(document).on 'turbolinks:load', ->
         $(this).attr 'name', new_name
 
       $(new_nested_form).insertAfter(last_nested_form)
+  else
+    $('body').on 'click','.destroy_nested_form', (e) ->
+      e.preventDefault()
+    $('body').on 'click','.mark_nested_form_as_destroyed', (e) ->
+      e.preventDefault()
+    $('.insert_nested_form').click (e) ->
+      e.preventDefault()
