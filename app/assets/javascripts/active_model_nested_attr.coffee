@@ -1,25 +1,27 @@
-$(document).on 'turbolinks:load', ->
-  if $('.duplicatable_nested_form').length
+initializeNestedAttributes = (name) ->
+  if $(".duplicatable_nested_#{name}_form").length
+    forms_on_page = $(".duplicatable_nested_#{name}_form").length
 
-    forms_on_page = $('.duplicatable_nested_form').length
-
-    $('body').on 'click','.destroy_nested_form', (e) ->
+    $('body').on 'click', ".destroy_nested_#{name}_form", (e) ->
       e.preventDefault()
-      if $('.duplicatable_nested_form').length > 1
-        $(this).closest('.duplicatable_nested_form').slideUp().remove()
+      if $(".duplicatable_nested_#{name}_form:visible").length > 1
+        $(this).closest(".duplicatable_nested_#{name}_form").slideUp().remove()
 
-    $('body').on 'click','.mark_nested_form_as_destroyed', (e) ->
+    $('body').on 'click', ".mark_nested_#{name}_form_as_destroyed", (e) ->
       e.preventDefault()
-      form = $(this).closest('.duplicatable_nested_form')
+      form = $(this).closest(".duplicatable_nested_#{name}_form")
       form.find('input[id*="_destroy"]').val('true')
       form.slideUp().hide()
 
-    $('.insert_nested_form').click (e) ->
+    $(".insert_nested_#{name}_form").on 'click', (e) ->
       e.preventDefault()
-      last_nested_form = $('.duplicatable_nested_form').last()
+      last_nested_form = $(".duplicatable_nested_#{name}_form").last()
       new_nested_form = $(last_nested_form).clone(true)
       new_nested_form.show()
       forms_on_page += 1
+
+      $(new_nested_form).find(".mark_nested_#{name}_form_as_destroyed").each ->
+        $(this).toggleClass("mark_nested_#{name}_form_as_destroyed destroy_nested_#{name}_form")
 
       $(new_nested_form).find('label').each ->
         old_label = $(this).attr 'for'
@@ -46,9 +48,10 @@ $(document).on 'turbolinks:load', ->
 
       $(new_nested_form).insertAfter(last_nested_form)
   else
-    $('body').on 'click','.destroy_nested_form', (e) ->
+    $('body').on 'click', ".destroy_nested_#{name}_form", (e) ->
       e.preventDefault()
-    $('body').on 'click','.mark_nested_form_as_destroyed', (e) ->
+    $('body').on 'click',".mark_nested_#{name}_form_as_destroyed", (e) ->
       e.preventDefault()
-    $('.insert_nested_form').click (e) ->
+    $(".insert_nested_#{name}_form").on 'click', (e) ->
       e.preventDefault()
+window.initializeNestedAttributes = initializeNestedAttributes

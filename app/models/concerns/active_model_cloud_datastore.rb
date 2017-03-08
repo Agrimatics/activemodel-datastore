@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
-# Integrates ActiveModel with the Google::Cloud::Datastore
+##
+# = Integrates ActiveModel with the Google::Cloud::Datastore
+#
+# Makes google-cloud-datastore compliant with active_model conventions.
+#
+# Start by...are we going to include the module or inherit?
+#
+#
 module ActiveModelCloudDatastore
   extend ActiveSupport::Concern
   include ActiveModel::Model
@@ -28,6 +35,50 @@ module ActiveModelCloudDatastore
   #
   def persisted?
     id.present?
+  end
+
+  ##
+  # Sets a default value for the attribute if not currently set.
+  #
+  # Example:
+  #   default :state, 0
+  #
+  # is equivalent to:
+  #   self.state = state.presence || 0
+  #
+  # Example:
+  #   default :enabled, false
+  #
+  # is equivalent to:
+  #   self.enabled = false if enabled.nil?
+  #
+  def default(attr, value)
+    if value.is_a?(TrueClass) || value.is_a?(FalseClass)
+      send("#{attr.to_sym}=", value) if send(attr.to_sym).nil?
+    else
+      send("#{attr.to_sym}=", send(attr.to_sym).presence || value)
+    end
+  end
+
+  ##
+  # Converts the type of the attribute.
+  #
+  # Example:
+  #   format :weight, :float
+  #
+  # is equivalent to:
+  #   self.weight = weight.to_f if weight.present?
+  #
+  def format(attr, type)
+    return unless send(attr.to_sym).present?
+    case type.to_sym
+    when :float
+      send("#{attr.to_sym}=", send(attr.to_sym).to_f)
+    when :integer
+      send("#{attr.to_sym}=", send(attr.to_sym).to_i)
+    else
+      raise ArgumentError, 'Supported types are :float, :integer'
+    end
   end
 
   # -------------------------------- start track_changes.rb --------------------------------
@@ -78,6 +129,7 @@ module ActiveModelCloudDatastore
       with_changes = Array(send(attr.to_sym)).select(&:values_changed?)
       send("#{attr}=", with_changes)
     end
+    nested_attributes.delete_if { |attr| Array(send(attr.to_sym)).size.zero? }
   end
 
   # -------------------------------- end track_changes.rb --------------------------------
@@ -210,7 +262,7 @@ module ActiveModelCloudDatastore
       if options[:limit]
         next_cursor = entities.cursor if entities.size == options[:limit]
       else
-        entities.all(request_limit: Rails.configuration.settings['batch_size'])
+        entities.all
       end
       model_entities = from_entities(entities.flatten)
       return model_entities, next_cursor
@@ -442,13 +494,13 @@ module ActiveModelCloudDatastore
   end
 
   ##
-  # Raised when a record is invalid and can not be saved.
+  # Raised while attempting to save an invalid entity.
   #
   class EntityNotSavedError < ActiveModelCloudDatastoreError
   end
 
   ##
-  # Raised when a record is invalid and can not be saved.
+  # Raised when an entity is not configured for tracking changes.
   #
   class TrackChangesError < ActiveModelCloudDatastoreError
   end

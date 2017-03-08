@@ -62,6 +62,7 @@ class TrackChangesTest < ActiveSupport::TestCase
     mock_model_parent.remove_unmodified_children
     assert_equal 0, mock_model_parent.mock_models.size
     mock_model_parent.mock_models = [MockModel.new(name: 'M1'), MockModel.new(name: 'M2')]
+    mock_model_parent.nested_attributes = [:mock_models]
     mock_model_parent.mock_models.each(&:reload!)
     mock_model_parent.mock_models.first.name = 'M1 Modified'
     mock_model_parent.remove_unmodified_children

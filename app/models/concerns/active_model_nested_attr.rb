@@ -148,7 +148,7 @@ module ActiveModelNestedAttr
   # with ID 2 for destruction.
   #
   #   assign_nested_attributes(:recipe_contents, {
-  #     '0' => { id: '1', amount: '123 },
+  #     '0' => { id: '1', amount: '123' },
   #     '1' => { amount: '45' },
   #     '2' => { id: '2', _destroy: true }
   #   })
