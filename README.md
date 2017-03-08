@@ -19,7 +19,7 @@ Makes [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-clo
       before_save { puts '** something can happen before save **'}
       after_save { puts '** something can happen after save **'}
 
-      validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+      validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
       validates :name, presence: true, length: { maximum: 30 }
 
       def entity_properties

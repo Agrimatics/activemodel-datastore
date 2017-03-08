@@ -6,10 +6,10 @@ class User
   before_validation :set_default_values
   after_validation :format_values
 
-  before_save { puts '** something can happen before save **'}
-  after_save { puts '** something can happen after save **'}
+  before_save { puts '** something can happen before save **' }
+  after_save { puts '** something can happen after save **' }
 
-  validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+  validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
 
   def entity_properties

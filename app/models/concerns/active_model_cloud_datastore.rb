@@ -14,10 +14,10 @@
 #     attr_accessor :email, :name, :enabled, :state
 #
 #     before_validation :set_default_values
-#     before_save { puts '** something can happen before save **'}
-#     after_save { puts '** something can happen after save **'}
+#     before_save { puts '** something can happen before save **' }
+#     after_save { puts '** something can happen after save **' }
 #
-#     validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+#     validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
 #     validates :name, presence: true, length: { maximum: 30 }
 #
 #     def entity_properties
@@ -174,12 +174,12 @@ module ActiveModelCloudDatastore
   def format_property_value(attr, type)
     return unless send(attr.to_sym).present?
     case type.to_sym
-      when :float
-        send("#{attr.to_sym}=", send(attr.to_sym).to_f)
-      when :integer
-        send("#{attr.to_sym}=", send(attr.to_sym).to_i)
-      else
-        raise ArgumentError, 'Supported types are :float, :integer'
+    when :float
+      send("#{attr.to_sym}=", send(attr.to_sym).to_f)
+    when :integer
+      send("#{attr.to_sym}=", send(attr.to_sym).to_i)
+    else
+      raise ArgumentError, 'Supported types are :float, :integer'
     end
   end
 
