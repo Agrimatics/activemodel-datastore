@@ -1,12 +1,116 @@
 # frozen_string_literal: true
 
 ##
-# = Integrates ActiveModel with the Google::Cloud::Datastore
+# = Integrates [ActiveModel](https://github.com/rails/rails/tree/master/activemodel)
+# with the [Google::Cloud::Datastore](https://cloud.google.com/datastore)
 #
-# Makes google-cloud-datastore compliant with active_model conventions.
+# Making google-cloud-datastore compliant with Rails active_model conventions since 2017!
 #
-# Start by...are we going to include the module or inherit?
+# Why would you want to use Google's NoSQL cloud datastore with Rails? When you want Rails
+# backed by a managed, massively-scalable datastore solution. Start by generating a Rails app
+# with -O to skip ActiveRecord. Let's start with the model:
 #
+#   class User
+#     include ActiveModelCloudDatastore
+#
+#     attr_accessor :email, :name, :enabled, :state
+#
+#     before_validation :set_default_values
+#     before_save { puts '** something can happen before save **'}
+#     after_save { puts '** something can happen after save **'}
+#
+#     validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+#     validates :name, presence: true, length: { maximum: 30 }
+#
+#     def entity_properties
+#       %w(email name enabled)
+#     end
+#
+#     def set_default_values
+#       default_property_value :enabled, true
+#     end
+#
+#     def format_values
+#       format_property_value :role, :integer
+#     end
+#   end
+#
+# Using `attr_accessor` the attributes of the model are defined. Validations and Callbacks all work
+# as you would expect. However, `entity_properties` is new. Data objects in Google Cloud Datastore
+# are known as entities. Entities are of a kind. An entity has one or more named properties, each
+# of which can have one or more values. Think of them like this:
+# * 'Kind' (which is your table)
+# * 'Entity' (which is the record from the table)
+# * 'Property' (which is the attribute of the record)
+# The `entity_properties` method defines an Array of the properties that belong to the entity in
+# cloud datastore. With this approach, Rails deals solely with ActiveModel objects. The objects are
+# converted to/from entities as needed during save/query operations.
+#
+# We have also added the ability to set default property values and typecast the format of values
+# for entities.
+#
+# Now on to the controller! A scaffold generated controller works out of the box:
+#
+#   class UsersController < ApplicationController
+#     before_action :set_user, only: [:show, :edit, :update, :destroy]
+#
+#     def index
+#       @users = User.all
+#     end
+#
+#     def show
+#     end
+#
+#     def new
+#       @user = User.new
+#     end
+#
+#     def edit
+#     end
+#
+#     def create
+#       @user = User.new(user_params)
+#       respond_to do |format|
+#         if @user.save
+#           format.html { redirect_to @user, notice: 'User was successfully created.' }
+#         else
+#           format.html { render :new }
+#         end
+#       end
+#     end
+#
+#     def update
+#       respond_to do |format|
+#         if @user.update(user_params)
+#           format.html { redirect_to @user, notice: 'User was successfully updated.' }
+#         else
+#           format.html { render :edit }
+#         end
+#       end
+#     end
+#
+#     def destroy
+#       @user.destroy
+#       respond_to do |format|
+#         format.html { redirect_to users_url, notice: 'User was successfully destroyed.' }
+#       end
+#     end
+#
+#     private
+#
+#     def set_user
+#       @user = User.find(params[:id])
+#     end
+#
+#     def user_params
+#       params.require(:user).permit(:email, :name)
+#     end
+#   end
+#
+# TODO: describe eventual consistency with ancestor queries and entity groups.
+# TODO: describe the available query options.
+# TODO: describe indexes.
+# TODO: describe the change tracking implementation.
 #
 module ActiveModelCloudDatastore
   extend ActiveSupport::Concern
@@ -38,21 +142,21 @@ module ActiveModelCloudDatastore
   end
 
   ##
-  # Sets a default value for the attribute if not currently set.
+  # Sets a default value for the property if not currently set.
   #
   # Example:
-  #   default :state, 0
+  #   default_property_value :state, 0
   #
   # is equivalent to:
   #   self.state = state.presence || 0
   #
   # Example:
-  #   default :enabled, false
+  #   default_property_value :enabled, false
   #
   # is equivalent to:
   #   self.enabled = false if enabled.nil?
   #
-  def default(attr, value)
+  def default_property_value(attr, value)
     if value.is_a?(TrueClass) || value.is_a?(FalseClass)
       send("#{attr.to_sym}=", value) if send(attr.to_sym).nil?
     else
@@ -61,23 +165,23 @@ module ActiveModelCloudDatastore
   end
 
   ##
-  # Converts the type of the attribute.
+  # Converts the type of the property.
   #
   # Example:
-  #   format :weight, :float
+  #   format_property_value :weight, :float
   #
   # is equivalent to:
   #   self.weight = weight.to_f if weight.present?
   #
-  def format(attr, type)
+  def format_property_value(attr, type)
     return unless send(attr.to_sym).present?
     case type.to_sym
-    when :float
-      send("#{attr.to_sym}=", send(attr.to_sym).to_f)
-    when :integer
-      send("#{attr.to_sym}=", send(attr.to_sym).to_i)
-    else
-      raise ArgumentError, 'Supported types are :float, :integer'
+      when :float
+        send("#{attr.to_sym}=", send(attr.to_sym).to_f)
+      when :integer
+        send("#{attr.to_sym}=", send(attr.to_sym).to_i)
+      else
+        raise ArgumentError, 'Supported types are :float, :integer'
     end
   end
 
@@ -484,11 +588,11 @@ module ActiveModelCloudDatastore
   # Generic Active Model Cloud Datastore exception class.
   #
   class ActiveModelCloudDatastoreError < StandardError
-    attr_reader :record
+    attr_reader :object
 
-    def initialize(message = nil, record = nil)
-      @record = record
-      puts "\e[33m[#{self.record.errors.messages}]\e[0m"
+    def initialize(message = nil, object = nil)
+      @object = object
+      puts "\e[33m[#{self.object.errors.messages}]\e[0m"
       super(message)
     end
   end

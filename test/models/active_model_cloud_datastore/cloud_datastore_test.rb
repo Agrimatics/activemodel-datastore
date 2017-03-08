@@ -20,18 +20,18 @@ class CloudDatastoreTest < ActiveSupport::TestCase
 
   test 'default' do
     mock_model = MockModel.new
-    mock_model.default(:name, 'Default Name')
+    mock_model.default_property_value(:name, 'Default Name')
     assert_equal 'Default Name', mock_model.name
     mock_model.name = 'A New Name'
-    mock_model.default(:name, 'Default Name')
+    mock_model.default_property_value(:name, 'Default Name')
     assert_equal 'A New Name', mock_model.name
   end
 
   test 'format' do
     mock_model = MockModel.new(name: '34')
-    mock_model.format(:name, :integer)
+    mock_model.format_property_value(:name, :integer)
     assert_equal 34, mock_model.name
-    mock_model.format(:name, :float)
+    mock_model.format_property_value(:name, :float)
     assert_equal 34.0, mock_model.name
   end
 

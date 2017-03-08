@@ -1,10 +1,13 @@
 class User
   include ActiveModelCloudDatastore
-  attr_accessor :email, :name, :enabled
+
+  attr_accessor :email, :name, :enabled, :role
 
   before_validation :set_default_values
-  # after_save :something_can_go_here
-  # after_destroy :something_can_go_here
+  after_validation :format_values
+
+  before_save { puts '** something can happen before save **'}
+  after_save { puts '** something can happen after save **'}
 
   validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
@@ -14,6 +17,10 @@ class User
   end
 
   def set_default_values
-    default :enabled, true
+    default_property_value :enabled, true
+  end
+
+  def format_values
+    format_property_value :role, :integer
   end
 end
