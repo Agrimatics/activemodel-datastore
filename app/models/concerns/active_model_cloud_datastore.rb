@@ -1,14 +1,12 @@
 # frozen_string_literal: true
 
 ##
-# = Integrates [ActiveModel](https://github.com/rails/rails/tree/master/activemodel)
-# with the [Google::Cloud::Datastore](https://cloud.google.com/datastore)
+# = Active Model Cloud Datastore
 #
-# Making google-cloud-datastore compliant with Rails active_model conventions since 2017!
+# Makes google-cloud-datastore compliant with active_model conventions and compatible with
+# your Rails 5 applications.
 #
-# Why would you want to use Google's NoSQL cloud datastore with Rails? When you want Rails
-# backed by a managed, massively-scalable datastore solution. First, generate a Rails app
-# with -O to skip ActiveRecord. Let's start with the model:
+# Let's start by implementing the model:
 #
 #   class User
 #     include ActiveModelCloudDatastore
