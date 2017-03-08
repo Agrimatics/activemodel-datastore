@@ -3,12 +3,12 @@ require 'test_helper'
 class CloudDatastoreTest < ActiveSupport::TestCase
   # Instance method tests.
 
-  test 'attributes' do
+  test 'entity properties' do
     class MockModelNoAttr
       include ActiveModelCloudDatastore
     end
     mock_model = MockModelNoAttr.new
-    assert_equal [], mock_model.attributes
+    assert_equal [], mock_model.entity_properties
   end
 
   test 'persisted?' do

@@ -4,6 +4,7 @@ require File.expand_path('../../config/environment', __FILE__)
 require 'entity_class_method_extensions'
 require 'rails/test_help'
 require 'minitest/reporters'
+
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 FactoryGirl.find_definitions
 
@@ -15,7 +16,7 @@ class MockModel
   validates :name, presence: true
   enable_change_tracking :name, :role
 
-  def attributes
+  def entity_properties
     %w(name role)
   end
 end

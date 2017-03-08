@@ -22,7 +22,7 @@ module ActiveModelCloudDatastore
     attr_accessor :id, :exclude_from_save
   end
 
-  def attributes
+  def entity_properties
     []
   end
 
@@ -142,7 +142,7 @@ module ActiveModelCloudDatastore
   def build_entity(parent = nil)
     entity = CloudDatastore.dataset.entity(self.class.name, id)
     entity.key.parent = parent if parent.present?
-    attributes.each do |attr|
+    entity_properties.each do |attr|
       entity[attr] = instance_variable_get("@#{attr}")
     end
     entity

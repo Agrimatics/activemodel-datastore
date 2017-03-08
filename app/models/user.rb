@@ -9,11 +9,11 @@ class User
   validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
 
-  def attributes
+  def entity_properties
     %w(email name enabled)
   end
 
   def set_default_values
-    self.enabled ||= true
+    default :enabled, true
   end
 end
