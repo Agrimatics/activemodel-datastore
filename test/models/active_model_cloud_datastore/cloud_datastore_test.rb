@@ -18,16 +18,20 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     assert mock_model.persisted?
   end
 
-  test 'default' do
+  test 'default property value' do
     mock_model = MockModel.new
+    mock_model.name = nil
     mock_model.default_property_value(:name, 'Default Name')
     assert_equal 'Default Name', mock_model.name
     mock_model.name = 'A New Name'
     mock_model.default_property_value(:name, 'Default Name')
     assert_equal 'A New Name', mock_model.name
+    mock_model.name = ''
+    mock_model.default_property_value(:name, 'Default Name')
+    assert_equal 'Default Name', mock_model.name
   end
 
-  test 'format' do
+  test 'format property value' do
     mock_model = MockModel.new(name: '34')
     mock_model.format_property_value(:name, :integer)
     assert_equal 34, mock_model.name
