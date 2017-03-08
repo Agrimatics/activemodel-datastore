@@ -40,11 +40,12 @@
 # * 'Kind' (which is your table)
 # * 'Entity' (which is the record from the table)
 # * 'Property' (which is the attribute of the record)
+#
 # The `entity_properties` method defines an Array of the properties that belong to the entity in
 # cloud datastore. With this approach, Rails deals solely with ActiveModel objects. The objects are
 # converted to/from entities as needed during save/query operations.
 #
-# We have also added the ability to set default property values and typecast the format of values
+# We have also added the ability to set default property values and type cast the format of values
 # for entities.
 #
 # Now on to the controller! A scaffold generated controller works out of the box:
