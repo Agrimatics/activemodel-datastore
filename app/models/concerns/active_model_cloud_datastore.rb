@@ -7,7 +7,7 @@
 # Making google-cloud-datastore compliant with Rails active_model conventions since 2017!
 #
 # Why would you want to use Google's NoSQL cloud datastore with Rails? When you want Rails
-# backed by a managed, massively-scalable datastore solution. Start by generating a Rails app
+# backed by a managed, massively-scalable datastore solution. First, generate a Rails app
 # with -O to skip ActiveRecord. Let's start with the model:
 #
 #   class User

@@ -7,7 +7,7 @@ Integrates [ActiveModel](https://github.com/rails/rails/tree/master/activemodel)
 **Making google-cloud-datastore compliant with Rails active_model conventions since 2016!**
 
  Why would you want to use Google's NoSQL cloud datastore with Rails? When you want Rails
- backed by a managed, massively-scalable datastore solution. Start by generating a Rails app
+ backed by a managed, massively-scalable datastore solution. First, generate a Rails app
  with -O to skip ActiveRecord.
  
  Let's start with the model:
@@ -15,29 +15,23 @@ Integrates [ActiveModel](https://github.com/rails/rails/tree/master/activemodel)
     class User
       include ActiveModelCloudDatastore
 
-      
       attr_accessor :email, :name, :enabled, :state
 
-      
       before_validation :set_default_values
       before_save { puts '** something can happen before save **'}
       after_save { puts '** something can happen after save **'}
 
-      
       validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
       validates :name, presence: true, length: { maximum: 30 }
 
-      
       def entity_properties
         %w(email name enabled)
       end
 
-      
       def set_default_values
         default_property_value :enabled, true
       end
 
-      
       def format_values
         format_property_value :role, :integer
       end
@@ -62,25 +56,20 @@ Now on to the controller! A scaffold generated controller works out of the box:
     class UsersController < ApplicationController
       before_action :set_user, only: [:show, :edit, :update, :destroy]
 
-      
       def index
         @users = User.all
       end
 
-      
       def show
       end
 
-      
       def new
         @user = User.new
       end
 
-      
       def edit
       end
 
-      
       def create
         @user = User.new(user_params)
         respond_to do |format|
@@ -92,7 +81,6 @@ Now on to the controller! A scaffold generated controller works out of the box:
         end
       end
 
-      
       def update
         respond_to do |format|
           if @user.update(user_params)
@@ -103,7 +91,6 @@ Now on to the controller! A scaffold generated controller works out of the box:
         end
       end
 
-      
       def destroy
         @user.destroy
         respond_to do |format|
@@ -111,15 +98,12 @@ Now on to the controller! A scaffold generated controller works out of the box:
         end
       end
 
-      
       private
 
-      
       def set_user
         @user = User.find(params[:id])
       end
 
-      
       def user_params
         params.require(:user).permit(:email, :name)
       end
@@ -172,7 +156,6 @@ Example:
       validates :recipe_contents, presence: true
       validates_associated :recipe_contents
 
-      
       def recipe_contents_attributes=(attributes)
         assign_nested_attributes(:recipe_contents, attributes)
       end
@@ -196,7 +179,6 @@ pass your criteria. For example:
         assign_nested_attributes(:recipe_contents, attributes, reject_if: reject_recipes)
       end
 
-      
       def reject_recipes(attributes)
         attributes['name'].blank?
       end
