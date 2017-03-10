@@ -468,7 +468,7 @@ module ActiveModelCloudDatastore
       model_entity.id = entity.key.id unless entity.key.id.nil?
       model_entity.id = entity.key.name unless entity.key.name.nil?
       entity.properties.to_hash.each do |name, value|
-        model_entity.send "#{name}=", value
+        model_entity.send "#{name}=", value if model_entity.respond_to? "#{name}="
       end
       model_entity.reload!
       model_entity
