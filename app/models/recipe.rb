@@ -10,7 +10,7 @@ class Recipe
 
   validates :amount, numericality: { greater_than_or_equal_to: 1 }
   validates :name, presence: true
-  
+
   validates :ingredients, presence: true # Recipes must have at least one RecipeContent.
   validates_associated :ingredients
 
