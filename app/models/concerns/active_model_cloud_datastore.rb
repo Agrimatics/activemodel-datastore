@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 ##
-# = Active Model Cloud Datastore
+# = Active Model Datastore
 #
-# Makes google-cloud-datastore compliant with active_model conventions and compatible with
+# Makes the google-cloud-datastore gem compliant with active_model conventions and compatible with
 # your Rails 5 applications.
 #
 # Let's start by implementing the model:

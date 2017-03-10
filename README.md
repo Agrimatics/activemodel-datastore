@@ -1,7 +1,7 @@
-Active Model Google Cloud Datastore
+Active Model Datastore
 ===================================
 
-Makes [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5 applications. 
+Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5 applications. 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
@@ -36,7 +36,7 @@ Makes [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-clo
     end
 
 Using `attr_accessor` the attributes of the model are defined. Validations and Callbacks all work 
-as you would expect. However, `entity_properties` is new. Data objects in Google Cloud Datastore
+as you would expect. However, `entity_properties` is new. Data objects in Cloud Datastore
 are known as entities. Entities are of a kind. An entity has one or more named properties, each
 of which can have one or more values. Think of them like this:
 * 'Kind' (which is your table)
