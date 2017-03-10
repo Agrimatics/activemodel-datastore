@@ -130,26 +130,25 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     mock_model = MockModel.new(attributes_for(:mock_model, name: 'MockModel'))
     mock_model.save(parent)
     create(:mock_model, name: 'MockModel No Ancestor')
-    objects, _cursor = MockModel.find_in_batches
+    objects = MockModel.all
     assert_equal MockModel, objects.first.class
     assert_equal 12, objects.count
-    objects, _cursor = MockModel.find_in_batches(ancestor: parent)
+    objects = MockModel.all(ancestor: parent)
     assert_equal 11, objects.count
-    objects, start_cursor = MockModel.find_in_batches(ancestor: parent, limit: 7)
+    objects, start_cursor = MockModel.all(ancestor: parent, limit: 7)
     assert_equal 7, objects.count
     refute_nil start_cursor # requested 7 results and there are 4 more
-    objects, _cursor = MockModel.find_in_batches(ancestor: parent, cursor: start_cursor)
+    objects = MockModel.all(ancestor: parent, cursor: start_cursor)
     assert_equal 4, objects.count
-    objects, cursor = MockModel.find_in_batches(ancestor: parent, cursor: start_cursor, limit: 5)
+    objects, cursor = MockModel.all(ancestor: parent, cursor: start_cursor, limit: 5)
     assert_equal 4, objects.count
     assert_nil cursor # query started where we left off, requested 5 results and there were 4 more
-    objects, cursor = MockModel.find_in_batches(ancestor: parent, cursor: start_cursor, limit: 4)
+    objects, cursor = MockModel.all(ancestor: parent, cursor: start_cursor, limit: 4)
     assert_equal 4, objects.count
     refute_nil cursor # query started where we left off, requested 4 results and there were 4 more
-    objects, _cursor = MockModel.find_in_batches(ancestor: parent,
-                                                 where: ['name', '=', mock_model.name])
+    objects = MockModel.all(ancestor: parent, where: ['name', '=', mock_model.name])
     assert_equal 1, objects.count
-    objects, _cursor = MockModel.find_in_batches(ancestor: parent, select: 'name', limit: 1)
+    objects, _cursor = MockModel.all(ancestor: parent, select: 'name', limit: 1)
     assert_equal 1, objects.count
     refute_nil objects.first.name
   end
@@ -169,6 +168,7 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     entity = MockModel.find_entity(mock_model_2.id, parent)
     assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
     assert_equal 'Entity 2', entity.properties['name']
+    assert_nil MockModel.find_entity(mock_model_2.id + 1)
   end
 
   test 'find entities' do
@@ -187,6 +187,19 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     entities = MockModel.find_entities(mock_model_2.id, mock_model_3.id, parent: parent)
     assert_equal 1, entities.size
     assert_equal 'Entity 3', entities[0][:name]
+    assert_empty MockModel.find_entities(mock_model_3.id + 1)
+  end
+
+  test 'find entities should exclude duplicates' do
+    mock_model_1 = create(:mock_model, name: 'Entity 1')
+    entities = MockModel.find_entities(mock_model_1.id, mock_model_1.id, mock_model_1.id)
+    assert_equal 1, entities.size
+  end
+
+  test 'find entities should exclude nil ids' do
+    mock_model_1 = create(:mock_model, name: 'Entity 1')
+    entities = MockModel.find_entities(mock_model_1.id, nil)
+    assert_equal 1, entities.size
   end
 
   test 'find' do
@@ -200,7 +213,7 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     parent = CloudDatastore.dataset.key('Parent', MOCK_ACCOUNT_ID)
     mock_model = MockModel.new(attributes_for(:mock_model, name: 'Entity With Parent'))
     mock_model.save(parent)
-    model_entity = MockModel.find_by_parent(mock_model.id, parent)
+    model_entity = MockModel.find(mock_model.id, parent: parent)
     assert model_entity.is_a?(MockModel), model_entity.inspect
     assert_equal 'Entity With Parent', model_entity.name
   end
@@ -211,10 +224,20 @@ class CloudDatastoreTest < ActiveSupport::TestCase
     mock_model_1.save(parent)
     mock_model_2 = MockModel.new(attributes_for(:mock_model, name: 'Entity 2 With Parent'))
     mock_model_2.save(parent)
-    model_entities = MockModel.find_all_by_parent([mock_model_1.id, mock_model_2.id], parent)
+    model_entities = MockModel.find(mock_model_1.id, mock_model_2.id, parent: parent)
     model_entities.each { |model| assert model.is_a?(MockModel), model.inspect }
     assert_equal 'Entity 1 With Parent', model_entities[0].name
     assert_equal 'Entity 2 With Parent', model_entities[1].name
+  end
+
+  test 'find without result' do
+    assert_nil MockModel.find(99999)
+    assert_empty MockModel.find([99999])
+  end
+
+  test 'find without results' do
+    assert_empty MockModel.find(99999, 88888)
+    assert_empty MockModel.find([99999, 88888])
   end
 
   test 'find by' do
