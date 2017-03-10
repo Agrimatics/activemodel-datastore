@@ -141,22 +141,22 @@ hash has a key for the association, Rails will call the `<association_name>_attr
 method on that object. Within the writer method call `assign_nested_attributes`, passing in
 the association name and attributes.
 
-Let's say we have a parent Recipe with RecipeContent children.
+Let's say we have a parent Recipe with Ingredient children.
 
 Start by defining within the Recipe model:
-* an attr_accessor of `:recipe_contents`
-* a writer method named `recipe_contents_attributes=`
+* an attr_accessor of `:ingredients`
+* a writer method named `ingredients_attributes=`
 * the `validates_associated` method can be used to validate the nested objects
 
 Example:
 
     class Recipe
-      attr_accessor :recipe_contents
-      validates :recipe_contents, presence: true
-      validates_associated :recipe_contents
+      attr_accessor :ingredients
+      validates :ingredients, presence: true
+      validates_associated :ingredients
 
-      def recipe_contents_attributes=(attributes)
-        assign_nested_attributes(:recipe_contents, attributes)
+      def ingredients_attributes=(attributes)
+        assign_nested_attributes(:ingredients, attributes)
       end
     end
 
@@ -164,18 +164,18 @@ You may also set a `:reject_if` proc to silently ignore any new record hashes if
 pass your criteria. For example:
 
    class Recipe
-     def recipe_contents_attributes=(attributes)
+     def ingredients_attributes=(attributes)
        reject_proc = proc { |attributes| attributes['name'].blank? }
-       assign_nested_attributes(:recipe_contents, attributes, reject_if: reject_proc)
+       assign_nested_attributes(:ingredients, attributes, reject_if: reject_proc)
      end
    end
 
  Alternatively,`:reject_if` also accepts a symbol for using methods:
 
     class Recipe
-      def recipe_contents_attributes=(attributes)
+      def ingredients_attributes=(attributes)
         reject_proc = proc { |attributes| attributes['name'].blank? }
-        assign_nested_attributes(:recipe_contents, attributes, reject_if: reject_recipes)
+        assign_nested_attributes(:ingredients, attributes, reject_if: reject_recipes)
       end
 
       def reject_recipes(attributes)
