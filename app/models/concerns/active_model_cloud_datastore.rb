@@ -515,35 +515,34 @@ module ActiveModelCloudDatastore
       query_options(query, options)
     end
 
-    def retry_on_exception?
-      retry_count = 0
-      sleep_time = 0.5 # 0.5, 1, 2, 4 second between retries
+    def retry_on_exception?(max_retry_count = 5)
+      retries = 0
+      sleep_time = 0.25
       begin
         yield
       rescue => e
-        puts "\e[33m[#{e.message.inspect}]\e[0m"
-        puts 'Rescued exception, retrying...'
+        return false if retries >= max_retry_count
+        puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
+        retries += 1
         sleep_time *= 2
-        retry_count += 1
-        return false if retry_count > 3
         retry
       end
-      true
     end
 
-    def retry_on_exception
-      retry_count = 0
-      sleep_time = 0.5 # 0.5, 1, 2, 4 second between retries
+    def retry_on_exception(max_retry_count = 5)
+      retries = 0
+      sleep_time = 0.25
       begin
         yield
       rescue => e
-        puts "\e[33m[#{e.message.inspect}]\e[0m"
-        puts 'Rescued exception, retrying...'
+        raise e if retries >= max_retry_count
+        puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
+        retries += 1
         sleep_time *= 2
-        retry_count += 1
-        raise e if retry_count > 3
         retry
       end
     end
