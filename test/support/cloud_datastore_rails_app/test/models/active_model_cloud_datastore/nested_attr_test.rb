@@ -137,7 +137,7 @@ class NestedAttrTest < ActiveSupport::TestCase
 end
 
 class MockModelParent
-  include ActiveModelNestedAttr
+  include ActiveModel::Datastore::NestedAttr
   attr_accessor :name
   attr_accessor :mock_models
 end

@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 class User
-  include ActiveModelCloudDatastore
+  include ActiveModel::Datastore
 
   attr_accessor :email, :name, :enabled, :role
 

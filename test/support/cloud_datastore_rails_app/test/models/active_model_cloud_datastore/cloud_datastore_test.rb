@@ -5,7 +5,7 @@ class CloudDatastoreTest < ActiveSupport::TestCase
 
   test 'entity properties' do
     class MockModelNoAttr
-      include ActiveModelCloudDatastore
+      include ActiveModel::Datastore
     end
     mock_model = MockModelNoAttr.new
     assert_equal [], mock_model.entity_properties

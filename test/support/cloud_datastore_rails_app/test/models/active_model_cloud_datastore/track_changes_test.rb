@@ -48,7 +48,7 @@ class TrackChangesTest < ActiveSupport::TestCase
 
   test 'remove unmodified children' do
     class MockModelParentWithTracking
-      include ActiveModelCloudDatastore
+      include ActiveModel::Datastore
       attr_accessor :name
       attr_accessor :mock_models
       enable_change_tracking :name
