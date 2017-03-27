@@ -1,6 +1,12 @@
 require 'test_helper'
 
-class CloudDatastoreTest < ActiveSupport::TestCase
+class ActiveModel::DatastoreTest < ActiveSupport::TestCase
+  # Packaging tests.
+
+  test 'test that it has a version number' do
+    refute_nil ::ActiveModel::Datastore::VERSION
+  end
+
   # Instance method tests.
 
   test 'entity properties' do

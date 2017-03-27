@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 class Recipe
   attr_accessor :amount               # Float
   attr_accessor :name                 # String

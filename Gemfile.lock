@@ -18,8 +18,14 @@ GEM
       tzinfo (~> 1.1)
     addressable (2.5.0)
       public_suffix (~> 2.0, >= 2.0.2)
+    ansi (1.5.0)
     ast (2.3.0)
+    builder (3.2.3)
     concurrent-ruby (1.0.5)
+    factory_girl (4.8.0)
+      activesupport (>= 3.0.0)
+    faker (1.7.3)
+      i18n (~> 0.5)
     faraday (0.11.0)
       multipart-post (>= 1.2, < 3)
     google-cloud-core (0.21.1)
@@ -56,6 +62,11 @@ GEM
       multi_json (~> 1.10)
     memoist (0.15.0)
     minitest (5.10.1)
+    minitest-reporters (1.1.14)
+      ansi
+      builder
+      minitest (>= 5.0)
+      ruby-progressbar
     multi_json (1.12.1)
     multipart-post (2.0.0)
     os (0.9.6)
@@ -87,7 +98,10 @@ PLATFORMS
 
 DEPENDENCIES
   activemodel-datastore!
+  factory_girl (<= 4.8.0)
+  faker (<= 1.7.3)
   minitest (~> 5.10)
+  minitest-reporters (<= 1.1.14)
   rubocop (<= 0.47.1)
 
 BUNDLED WITH

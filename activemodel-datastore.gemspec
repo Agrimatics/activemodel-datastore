@@ -16,18 +16,16 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version = '>= 2.3.0'
 
-  gem.files         = `git ls-files -z`.split("\x0").reject do |f|
-    f.match(%r{^(test|spec|features)/})
-  end
-
-  # spec.files         = Dir['MIT-LICENSE', 'README.md', 'lib/**/*']
-
+  gem.files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   gem.require_paths = ['lib']
 
   gem.add_runtime_dependency 'activemodel', '~> 5.0'
   gem.add_runtime_dependency 'activesupport', '~> 5.0'
   gem.add_runtime_dependency 'google-cloud-datastore', '~> 0.24'
 
+  gem.add_development_dependency 'factory_girl', '<= 4.8.0'
+  gem.add_development_dependency 'faker', '<= 1.7.3'
   gem.add_development_dependency 'minitest', '~> 5.10'
+  gem.add_development_dependency 'minitest-reporters', '<= 1.1.14'
   gem.add_development_dependency 'rubocop', '<= 0.47.1'
 end

@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 ENV['RAILS_ENV'] ||= 'test'
 require File.expand_path('../../config/environment', __FILE__)
 require 'entity_class_method_extensions'
