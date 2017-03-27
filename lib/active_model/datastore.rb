@@ -111,13 +111,13 @@
 # TODO: describe indexes.
 # TODO: describe the change tracking implementation.
 #
-module ActiveModelCloudDatastore
+module ActiveModel::Datastore
   extend ActiveSupport::Concern
   include ActiveModel::Model
   include ActiveModel::Dirty
   include ActiveModel::Validations
   include ActiveModel::Validations::Callbacks
-  include ActiveModelNestedAttr
+  include ActiveModel::Datastore::NestedAttr
 
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
