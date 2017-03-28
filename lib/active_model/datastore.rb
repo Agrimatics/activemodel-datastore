@@ -2,12 +2,12 @@
 # = Active Model Datastore
 #
 # Makes the google-cloud-datastore gem compliant with active_model conventions and compatible with
-# your Rails 5 applications.
+# your Rails 5+ applications.
 #
 # Let's start by implementing the model:
 #
 #   class User
-#     include ActiveModelCloudDatastore
+#     include ActiveModel::Datastore
 #
 #     attr_accessor :email, :name, :enabled, :state
 #
@@ -116,18 +116,15 @@ module ActiveModel::Datastore
   include ActiveModel::Validations
   include ActiveModel::Validations::Callbacks
   include ActiveModel::Datastore::NestedAttr
+  include ActiveModel::Datastore::TrackChanges
 
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
     define_model_callbacks :save, :update, :destroy
-    attr_accessor :id, :exclude_from_save
+    attr_accessor :id
   end
 
   def entity_properties
-    []
-  end
-
-  def tracked_attributes
     []
   end
 
@@ -182,59 +179,6 @@ module ActiveModel::Datastore
     end
   end
 
-  # -------------------------------- start track_changes.rb --------------------------------
-
-  ##
-  # Resets the ActiveModel::Dirty tracked changes.
-  #
-  def reload!
-    clear_changes_information
-    self.exclude_from_save = false
-  end
-
-  def exclude_from_save?
-    @exclude_from_save.nil? ? false : @exclude_from_save
-  end
-
-  ##
-  # Determines if any attribute values have changed using ActiveModel::Dirty.
-  # For attributes enabled for change tracking compares changed values. All values
-  # submitted from an HTML form are strings, thus a string of 25.0 doesn't match an
-  # original float of 25.0. Call this method after valid? to allow for any type coercing
-  # occurring before saving to datastore.
-  #
-  # For example, consider the scenario in which the user submits an unchanged form value:
-  # The initial value is a float, which during assign_attributes is set to a string and
-  # then coerced back to a float during a validation callback.
-  #
-  # If none of the tracked attributes have changed, exclude_from_save is set to true.
-  #
-  def values_changed?
-    unless tracked_attributes.present?
-      raise TrackChangesError, 'Object has not been configured for change tracking.'
-    end
-    changed = marked_for_destruction? ? true : false
-    tracked_attributes.each do |attr|
-      break if changed
-      if send("#{attr}_changed?")
-        changed = send(attr) == send("#{attr}_was") ? false : true
-      end
-    end
-    self.exclude_from_save = !changed
-    changed
-  end
-
-  def remove_unmodified_children
-    return unless tracked_attributes.present? && nested_attributes?
-    nested_attributes.each do |attr|
-      with_changes = Array(send(attr.to_sym)).select(&:values_changed?)
-      send("#{attr}=", with_changes)
-    end
-    nested_attributes.delete_if { |attr| Array(send(attr.to_sym)).size.zero? }
-  end
-
-  # -------------------------------- end track_changes.rb --------------------------------
-
   ##
   # Builds the Cloud Datastore entity with attributes from the Model object.
   #
@@ -264,7 +208,7 @@ module ActiveModel::Datastore
   #       parent = CloudDatastore.dataset.key 'Parent' + self.class.name, account_id.to_i
   #     end
   #     msg = 'Failed to save the entity'
-  #     save_entity(parent) || raise(ActiveModelCloudDatastore::EntityNotSavedError, msg)
+  #     save_entity(parent) || raise(ActiveModel::Datastore::EntityNotSavedError, msg)
   #   end
   #
   def save!
@@ -299,35 +243,8 @@ module ActiveModel::Datastore
     end
   end
 
-  # Methods defined here will be class methods whenever we 'include ActiveModelCloudDatastore'.
+  # Methods defined here will be class methods when 'include ActiveModel::Datastore'.
   module ClassMethods
-    ##
-    # Enables track changes functionality for the provided attributes using ActiveModel::Dirty.
-    #
-    # Calls define_attribute_methods for each attribute provided.
-    #
-    # Creates a setter for each attribute that will look something like this:
-    #   def name=(value)
-    #     name_will_change! unless value == @name
-    #     @name = value
-    #   end
-    #
-    # Overrides tracked_attributes to return an Array of the attributes configured for tracking.
-    #
-    def enable_change_tracking(*attributes)
-      attributes = attributes.collect(&:to_sym)
-      attributes.each do |attr|
-        define_attribute_methods attr
-
-        define_method("#{attr}=") do |value|
-          send("#{attr}_will_change!") unless value == instance_variable_get("@#{attr}")
-          instance_variable_set("@#{attr}", value)
-        end
-      end
-
-      define_method('tracked_attributes') { attributes }
-    end
-
     ##
     # Retrieves an entity by key and by an optional parent.
     #
@@ -604,32 +521,4 @@ module ActiveModel::Datastore
       retry_on_exception { CloudDatastore.dataset.find_all keys }
     end
   end
-
-  # -------------------------------- start errors.rb --------------------------------
-
-  ##
-  # Generic Active Model Cloud Datastore exception class.
-  #
-  class ActiveModelDatastoreError < StandardError
-  end
-
-  ##
-  # Raised while attempting to save an invalid entity.
-  #
-  class EntityNotSavedError < ActiveModelDatastoreError
-  end
-
-  ##
-  # Raised when an entity is not configured for tracking changes.
-  #
-  class TrackChangesError < ActiveModelDatastoreError
-  end
-
-  ##
-  # Raised when unable to find an entity by given id or set of ids.
-  #
-  class EntityError < ActiveModelDatastoreError
-  end
-
-  # --------------------------------- end errors.rb ---------------------------------
 end

@@ -6,7 +6,8 @@ tmp/*
 /.idea/*
 
 # Ignore all example Rails app logfiles and tempfiles.
-/test/support/cloud_datastore_rails_app/log
-!/test/support/cloud_datastore_rails_app/log/.keep
-/test/support/cloud_datastore_rails_app/tmp
-/test/support/cloud_datastore_rails_app/public/assets/*
+/test/support/datastore_example_rails_app/log/*
+!/test/support/datastore_example_rails_app/log/.keep
+/test/support/datastore_example_rails_app/tmp/*
+!/test/support/datastore_example_rails_app/tmp/.keep
+/test/support/datastore_example_rails_app/public/assets/*

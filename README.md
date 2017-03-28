@@ -11,7 +11,7 @@ Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google
  Let's start by implementing the model:
 
     class User
-      include ActiveModelCloudDatastore
+      include ActiveModel::Datastore
 
       attr_accessor :email, :name, :enabled, :state
 

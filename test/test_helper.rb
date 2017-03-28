@@ -8,7 +8,9 @@ require 'faker'
 
 require 'google/cloud/datastore'
 require 'active_model'
+require 'active_model/datastore/track_changes'
 require 'active_model/datastore/nested_attr'
+require 'active_model/datastore/errors'
 require 'active_model/datastore'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
