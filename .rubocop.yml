@@ -4,13 +4,13 @@ AllCops:
     - "activemodel-datastore.gemspec"
     - "Rakefile"
     - "lib/active_model/datastore/version.rb"
-    - "test/support/cloud_datastore_rails_app/bin/**/*"
-    - "test/support/cloud_datastore_rails_app/config/environments/**/*"
-    - "test/support/cloud_datastore_rails_app/config/application.rb"
-    - "test/support/cloud_datastore_rails_app/config/initializers/backtrace_silencers.rb"
-    - "test/support/cloud_datastore_rails_app/config/initializers/session_store.rb"
-    - "test/support/cloud_datastore_rails_app/vendor/**/*"
-    - "test/support/cloud_datastore_rails_app/Gemfile"
+    - "test/support/datastore_example_rails_app/bin/**/*"
+    - "test/support/datastore_example_rails_app/config/environments/**/*"
+    - "test/support/datastore_example_rails_app/config/application.rb"
+    - "test/support/datastore_example_rails_app/config/initializers/backtrace_silencers.rb"
+    - "test/support/datastore_example_rails_app/config/initializers/session_store.rb"
+    - "test/support/datastore_example_rails_app/vendor/**/*"
+    - "test/support/datastore_example_rails_app/Gemfile"
 
 Style/FrozenStringLiteralComment:
   Enabled: false
