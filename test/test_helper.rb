@@ -12,6 +12,7 @@ require 'active_model/datastore/track_changes'
 require 'active_model/datastore/nested_attr'
 require 'active_model/datastore/errors'
 require 'active_model/datastore'
+require 'action_controller/metal/strong_parameters'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 FactoryGirl.find_definitions

@@ -14,9 +14,9 @@ Gem::Specification.new do |gem|
   gem.homepage      = 'https://github.com/Agrimatics/activemodel-datastore'
   gem.license       = 'MIT'
 
-  gem.required_ruby_version = '>= 2.3.0'
+  gem.required_ruby_version = '>= 2.2.2'
 
-  gem.files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
+  gem.files         = Dir['CHANGELOG.md', 'README.md', 'LICENSE.txt', 'lib/**/*']
   gem.require_paths = ['lib']
 
   gem.add_runtime_dependency 'activemodel', '~> 5.0'
@@ -24,6 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'google-cloud-datastore', '~> 0.24'
 
   gem.add_development_dependency 'rake'
+  gem.add_development_dependency 'actionpack', '~> 5.0'
   gem.add_development_dependency 'factory_girl', '<= 4.8.0'
   gem.add_development_dependency 'faker', '<= 1.7.3'
   gem.add_development_dependency 'minitest', '~> 5.10'
