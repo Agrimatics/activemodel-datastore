@@ -23,6 +23,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'activesupport', '~> 5.0'
   gem.add_runtime_dependency 'google-cloud-datastore', '~> 0.24'
 
+  gem.add_development_dependency 'rake'
   gem.add_development_dependency 'factory_girl', '<= 4.8.0'
   gem.add_development_dependency 'faker', '<= 1.7.3'
   gem.add_development_dependency 'minitest', '~> 5.10'
