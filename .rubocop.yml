@@ -21,6 +21,9 @@ Style/ClassAndModuleChildren:
 Style/EmptyMethod:
   EnforcedStyle: expanded
 
+Style/SymbolArray:
+  EnforcedStyle: brackets
+
 Metrics/LineLength:
   Max: 100
 
