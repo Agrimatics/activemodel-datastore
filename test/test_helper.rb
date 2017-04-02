@@ -8,6 +8,7 @@ require 'faker'
 
 require 'google/cloud/datastore'
 require 'active_model'
+require 'active_model/datastore/connection'
 require 'active_model/datastore/track_changes'
 require 'active_model/datastore/nested_attr'
 require 'active_model/datastore/errors'
@@ -67,14 +68,5 @@ class ActiveSupport::TestCase
         CloudDatastore.dataset.delete(*entities)
       end
     end
-  end
-end
-
-module CloudDatastore
-  ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8181'
-  ENV['GCLOUD_PROJECT'] = 'test-datastore'
-
-  def self.dataset
-    @dataset ||= Google::Cloud.datastore(ENV['GCLOUD_PROJECT'])
   end
 end
