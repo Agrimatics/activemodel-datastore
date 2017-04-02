@@ -11,7 +11,7 @@ Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google
  Let's start by implementing the model:
 
     class User
-      include ActiveModelCloudDatastore
+      include ActiveModel::Datastore
 
       attr_accessor :email, :name, :enabled, :state
 
@@ -107,6 +107,14 @@ Now on to the controller! A scaffold generated controller works out of the box:
         params.require(:user).permit(:email, :name)
       end
     end
+
+Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore 
+API. When running on Google Cloud Platform environments the credentials will be discovered 
+automatically. When running on other environments (such as AWS or Heroku), the Service Account 
+credentials are specified by providing the JSON in an environment variables.
+
+TODO: Document the CloudDatastore dataset and the required the ENV variables:
+GCLOUD_PROJECT, SERVICE_ACCOUNT_CLIENT_EMAIL, SERVICE_ACCOUNT_PRIVATE_KEY
 
 TODO: describe eventual consistency with ancestor queries and entity groups.
 

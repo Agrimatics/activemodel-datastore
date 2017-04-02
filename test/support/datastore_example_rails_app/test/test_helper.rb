@@ -1,19 +1,8 @@
-require 'bundler/setup'
-require 'active_support'
-require 'active_support/testing/autorun'
+ENV['RAILS_ENV'] ||= 'test'
+require File.expand_path('../../config/environment', __FILE__)
 require 'entity_class_method_extensions'
+require 'rails/test_help'
 require 'minitest/reporters'
-require 'factory_girl'
-require 'faker'
-
-require 'google/cloud/datastore'
-require 'active_model'
-require 'active_model/datastore/connection'
-require 'active_model/datastore/track_changes'
-require 'active_model/datastore/nested_attr'
-require 'active_model/datastore/errors'
-require 'active_model/datastore'
-require 'action_controller/metal/strong_parameters'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 FactoryGirl.find_definitions
@@ -46,7 +35,7 @@ class ActiveSupport::TestCase
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?
-      data_dir = File.join(File.expand_path('../..', __FILE__), 'tmp', 'test_datastore')
+      data_dir = Rails.root.join('tmp', 'test_datastore')
       # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
       system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
       sleep 3

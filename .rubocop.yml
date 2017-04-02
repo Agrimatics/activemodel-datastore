@@ -1,13 +1,16 @@
 AllCops:
   TargetRubyVersion: 2.3
   Exclude:
-    - "bin/**/*"
-    - "config/environments/**/*"
-    - "config/application.rb"
-    - "config/initializers/backtrace_silencers.rb"
-    - "config/initializers/session_store.rb"
-    - "vendor/**/*"
-    - "Gemfile"
+    - "activemodel-datastore.gemspec"
+    - "Rakefile"
+    - "lib/active_model/datastore/version.rb"
+    - "test/support/datastore_example_rails_app/bin/**/*"
+    - "test/support/datastore_example_rails_app/config/environments/**/*"
+    - "test/support/datastore_example_rails_app/config/application.rb"
+    - "test/support/datastore_example_rails_app/config/initializers/backtrace_silencers.rb"
+    - "test/support/datastore_example_rails_app/config/initializers/session_store.rb"
+    - "test/support/datastore_example_rails_app/vendor/**/*"
+    - "test/support/datastore_example_rails_app/Gemfile"
 
 Style/FrozenStringLiteralComment:
   Enabled: false
@@ -17,6 +20,9 @@ Style/ClassAndModuleChildren:
 
 Style/EmptyMethod:
   EnforcedStyle: expanded
+
+Style/SymbolArray:
+  EnforcedStyle: brackets
 
 Metrics/LineLength:
   Max: 100
