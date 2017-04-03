@@ -4,36 +4,74 @@ Active Model Datastore
 Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5 applications. 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
- Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
- with Rails? When you want a Rails app backed by a managed, massively-scalable datastore solution. 
- First, generate a Rails app with -O to skip ActiveRecord.
+Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
+with Rails? 
+
+When you want a Rails app backed by a managed, massively-scalable datastore solution. 
  
- Let's start by implementing the model:
+## Status
+Pre-release. 
+ 
+## Table of contents
+ 
+- [Setup](#setup)
+- [Model Example](#model)
+- [Controller Example](#controller)
+ 
+## <a name="setup"></a>Setup
+ 
+To install, add this line to your `Gemfile` and run `bundle install`:
+ 
+```ruby
+gem 'activemodel-datastore', github: 'Agrimatics/activemodel-datastore'
+```
+ 
+Generate your Rails app without ActiveRecord:
+ 
+```
+rails new my_app -O
+```
+  
+Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API. 
 
-    class User
-      include ActiveModel::Datastore
+When running on Google Cloud Platform environments the credentials will be discovered automatically. 
+When running on other environments (such as AWS or Heroku), the Service Account credentials are 
+specified by providing the JSON in an environment variable.
 
-      attr_accessor :email, :name, :enabled, :state
+TODO: Document the CloudDatastore dataset and the required the ENV variables:
 
-      before_validation :set_default_values
-      before_save { puts '** something can happen before save **'}
-      after_save { puts '** something can happen after save **'}
+GCLOUD_PROJECT, SERVICE_ACCOUNT_CLIENT_EMAIL, SERVICE_ACCOUNT_PRIVATE_KEY
+ 
+## <a name="model"></a>Model Example
+ 
+Let's start by implementing the model:
 
-      validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
-      validates :name, presence: true, length: { maximum: 30 }
+```ruby
+class User
+  include ActiveModel::Datastore
 
-      def entity_properties
-        %w(email name enabled)
-      end
+  attr_accessor :email, :name, :enabled, :state
 
-      def set_default_values
-        default_property_value :enabled, true
-      end
+  before_validation :set_default_values
+  before_save { puts '** something can happen before save **'}
+  after_save { puts '** something can happen after save **'}
 
-      def format_values
-        format_property_value :role, :integer
-      end
-    end
+  validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+  validates :name, presence: true, length: { maximum: 30 }
+
+  def entity_properties
+    %w(email name enabled)
+  end
+
+  def set_default_values
+    default_property_value :enabled, true
+  end
+
+  def format_values
+    format_property_value :role, :integer
+  end
+end
+```
 
 Using `attr_accessor` the attributes of the model are defined. Validations and Callbacks all work 
 as you would expect. However, `entity_properties` is new. Data objects in Cloud Datastore
@@ -50,71 +88,67 @@ converted to/from entities as needed during save/query operations.
 We have also added the ability to set default property values and type cast the format of values
 for entities.
 
+## <a name="controller"></a>Controller Example
+
 Now on to the controller! A scaffold generated controller works out of the box:
 
-    class UsersController < ApplicationController
-      before_action :set_user, only: [:show, :edit, :update, :destroy]
+```ruby
+class UsersController < ApplicationController
+  before_action :set_user, only: [:show, :edit, :update, :destroy]
 
-      def index
-        @users = User.all
-      end
+  def index
+    @users = User.all
+  end
 
-      def show
-      end
+  def show
+  end
 
-      def new
-        @user = User.new
-      end
+  def new
+    @user = User.new
+  end
 
-      def edit
-      end
+  def edit
+  end
 
-      def create
-        @user = User.new(user_params)
-        respond_to do |format|
-          if @user.save
-            format.html { redirect_to @user, notice: 'User was successfully created.' }
-          else
-            format.html { render :new }
-          end
-        end
-      end
-
-      def update
-        respond_to do |format|
-          if @user.update(user_params)
-            format.html { redirect_to @user, notice: 'User was successfully updated.' }
-          else
-            format.html { render :edit }
-          end
-        end
-      end
-
-      def destroy
-        @user.destroy
-        respond_to do |format|
-          format.html { redirect_to users_url, notice: 'User was successfully destroyed.' }
-        end
-      end
-
-      private
-
-      def set_user
-        @user = User.find(params[:id])
-      end
-
-      def user_params
-        params.require(:user).permit(:email, :name)
+  def create
+    @user = User.new(user_params)
+    respond_to do |format|
+      if @user.save
+        format.html { redirect_to @user, notice: 'User was successfully created.' }
+      else
+        format.html { render :new }
       end
     end
+  end
 
-Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore 
-API. When running on Google Cloud Platform environments the credentials will be discovered 
-automatically. When running on other environments (such as AWS or Heroku), the Service Account 
-credentials are specified by providing the JSON in an environment variables.
+  def update
+    respond_to do |format|
+      if @user.update(user_params)
+        format.html { redirect_to @user, notice: 'User was successfully updated.' }
+      else
+        format.html { render :edit }
+      end
+    end
+  end
 
-TODO: Document the CloudDatastore dataset and the required the ENV variables:
-GCLOUD_PROJECT, SERVICE_ACCOUNT_CLIENT_EMAIL, SERVICE_ACCOUNT_PRIVATE_KEY
+  def destroy
+    @user.destroy
+    respond_to do |format|
+      format.html { redirect_to users_url, notice: 'User was successfully destroyed.' }
+    end
+  end
+
+  private
+
+  def set_user
+    @user = User.find(params[:id])
+  end
+
+  def user_params
+    params.require(:user).permit(:email, :name)
+  end
+end
+```
 
 TODO: describe eventual consistency with ancestor queries and entity groups.
 
@@ -243,15 +277,3 @@ To start the local GCD server:
 To start the local web server:
 
     $ rails server
-
-Implementation
---------------
-
-The Google::Cloud::Datastore::Dataset is implemented in config/initializers/cloud_datastore.rb.
-
-The Active Model interface layer is implemented as a model concern, located in app/models/concerns.
-
-Tests
------
-
-The active-model-cloud-datastore concern has tests, run them with rake test.
