@@ -175,7 +175,7 @@ module ActiveModel::Datastore
 
     private
 
-    UNASSIGNABLE_KEYS = %w(id _destroy).freeze
+    UNASSIGNABLE_KEYS = %w[id _destroy].freeze
 
     def validate_attributes(attributes)
       attributes = attributes.to_h if attributes.respond_to?(:permitted?)

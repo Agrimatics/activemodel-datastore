@@ -19,7 +19,7 @@
 #     validates :name, presence: true, length: { maximum: 30 }
 #
 #     def entity_properties
-#       %w(email name enabled)
+#       %w[email name enabled]
 #     end
 #
 #     def set_default_values

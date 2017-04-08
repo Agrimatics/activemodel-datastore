@@ -1,6 +1,8 @@
 module ActiveModel::Datastore
   module TrackChanges
     extend ActiveSupport::Concern
+    include ActiveModel::Model
+    include ActiveModel::Dirty
 
     included do
       attr_accessor :exclude_from_save

@@ -9,7 +9,7 @@ gem 'coffee-rails', '~> 4.2'
 gem 'jquery-rails'
 gem 'turbolinks', '~> 5'
 
-gem 'puma', '3.8.0'
+gem 'puma', '3.8.2'
 gem 'rack-timeout'
 
 gem 'activemodel-datastore', path: File.expand_path('../../../..', __FILE__)
