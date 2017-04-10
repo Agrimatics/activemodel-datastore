@@ -104,11 +104,6 @@
 #     end
 #   end
 #
-# TODO: describe eventual consistency with ancestor queries and entity groups.
-# TODO: describe the available query options.
-# TODO: describe indexes.
-# TODO: describe the change tracking implementation.
-#
 module ActiveModel::Datastore
   extend ActiveSupport::Concern
   include ActiveModel::Model
@@ -246,7 +241,7 @@ module ActiveModel::Datastore
   # Methods defined here will be class methods when 'include ActiveModel::Datastore'.
   module ClassMethods
     ##
-    # Retrieves an entity by key and by an optional parent.
+    # Retrieves an entity by id or name and by an optional parent.
     #
     # @param [Integer or String] id_or_name The id or name value of the entity Key.
     # @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.

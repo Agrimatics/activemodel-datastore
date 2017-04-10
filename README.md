@@ -17,30 +17,46 @@ Pre-release.
 - [Setup](#setup)
 - [Model Example](#model)
 - [Controller Example](#controller)
+- [Retrieving Entities](#queries)
+- [Development and Test](#development)
+- [Nested Forms](#nested)
  
 ## <a name="setup"></a>Setup
  
+Generate your Rails app without ActiveRecord:
+ 
+```bash
+rails new my_app -O
+```
+
 To install, add this line to your `Gemfile` and run `bundle install`:
  
 ```ruby
 gem 'activemodel-datastore', github: 'Agrimatics/activemodel-datastore'
 ```
- 
-Generate your Rails app without ActiveRecord:
- 
-```
-rails new my_app -O
-```
   
-Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API. 
+Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API.
+ 
+*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to use the Google Cloud Datastore API.*
 
-When running on Google Cloud Platform environments the credentials will be discovered automatically. 
-When running on other environments (such as AWS or Heroku), the Service Account credentials are 
-specified by providing the JSON in an environment variable.
+Set your project id in an `ENV` variable named `GCLOUD_PROJECT`.
 
-TODO: Document the CloudDatastore dataset and the required the ENV variables:
+To locate your project ID:
 
-GCLOUD_PROJECT, SERVICE_ACCOUNT_CLIENT_EMAIL, SERVICE_ACCOUNT_PRIVATE_KEY
+1. Go to the Cloud Platform Console.
+2. From the projects list, select the name of your project.
+3. On the left, click Dashboard. The project name and ID are displayed in the Dashboard.
+
+When running on Google Cloud Platform environments the Service Account credentials will be discovered automatically. 
+When running on other environments (such as AWS or Heroku), the Service Account credentials need to be 
+specified in two additional `ENV` variables named `SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`.
+
+```bash
+SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
+SERVICE_ACCOUNT_CLIENT_EMAIL = web-app@app-name.iam.gserviceaccount.com
+```
+
+On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
  
 ## <a name="model"></a>Model Example
  
@@ -150,16 +166,141 @@ class UsersController < ApplicationController
 end
 ```
 
-TODO: describe eventual consistency with ancestor queries and entity groups.
+## <a name="queries"></a>Retrieving Entities
 
-TODO: describe the available query options.
+You can retrieve entities from datastore using the following class methods:
 
-TODO: describe indexes.
+```ruby
+##
+# Retrieves an entity by id or name and by an optional parent.
+#
+# @param [Integer or String] id_or_name The id or name value of the entity Key.
+# @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
+#
+# @return [Entity, nil] a Google::Cloud::Datastore::Entity object or nil.
+#
+Model.find_entity(id_or_name, parent = nil)
 
-TODO: describe the change tracking implementation.
 
-Cloud Datastore Active Model Nested Attributes
-----------------------------------------------
+##
+# Retrieves the entities for the provided ids by key and by an optional parent.
+# The find_all method returns LookupResults, which is a special case Array with
+# additional values. LookupResults are returned in batches, and the batch size is
+# determined by the Datastore API. Batch size is not guaranteed. It will be affected
+# by the size of the data being returned, and by other forces such as how distributed
+# and/or consistent the data in Datastore is. Calling `all` on the LookupResults retrieves
+# all results by repeatedly loading #next until #next? returns false. The `all` method
+# returns an enumerator unless passed a block. We iterate on the enumerator to return
+# the model entity objects.
+#
+# @param [Integer, String] ids_or_names One or more ids to retrieve.
+# @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
+#
+# @return [Array<Entity>] an array of Google::Cloud::Datastore::Entity objects.
+#
+Model.find_entities(*ids_or_names, parent: nil)
+
+
+##
+# Queries entities from Cloud Datastore by named kind and using the provided options.
+# When a limit option is provided queries up to the limit and returns results with a cursor.
+#
+# This method may make several API calls until all query results are retrieved. The `run`
+# method returns a QueryResults object, which is a special case Array with additional values.
+# QueryResults are returned in batches, and the batch size is determined by the Datastore API.
+# Batch size is not guaranteed. It will be affected by the size of the data being returned,
+# and by other forces such as how distributed and/or consistent the data in Datastore is.
+# Calling `all` on the QueryResults retrieves all results by repeatedly loading #next until
+# #next? returns false. The `all` method returns an enumerator which from_entities iterates on.
+#
+# Be sure to use as narrow a search criteria as possible. Please use with caution.
+#
+# @param [Hash] options The options to construct the query with.
+#
+# @option options [Google::Cloud::Datastore::Key] :ancestor Filter for inherited results.
+# @option options [String] :cursor Sets the cursor to start the results at.
+# @option options [Integer] :limit Sets a limit to the number of results to be returned.
+# @option options [String] :order Sort the results by property name.
+# @option options [String] :desc_order Sort the results by descending property name.
+# @option options [Array] :select Retrieve only select properties from the matched entities.
+# @option options [Array] :where Adds a property filter of arrays in the format
+#   [name, operator, value].
+#
+# @return [Array<Model>, String] An array of ActiveModel results
+#
+# or if options[:limit] was provided:
+#
+# @return [Array<Model>, String] An array of ActiveModel results and a cursor that
+#   can be used to query for additional results.
+#
+Model.all(options = {})
+
+
+##
+# Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6),
+# or an array of ids ([5, 6, 10]). The parent key is optional.
+#
+# @param [Integer] ids One or more ids to retrieve.
+# @param [Google::Cloud::Datastore::Key] parent The parent key of the entity.
+#
+# @return [Model, nil] An ActiveModel object or nil for a single id.
+# @return [Array<Model>] An array of ActiveModel objects for more than one id.
+#
+Model.find(*ids, parent: nil)
+
+
+##
+# Finds the first entity matching the specified condition.
+#
+# @param [Hash] args In which the key is the property and the value is the value to look for.
+# @option args [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
+#
+# @return [Model, nil] An ActiveModel object or nil.
+#
+# @example
+#   User.find_by(name: 'Joe')
+#   User.find_by(name: 'Bryce', ancestor: parent)
+#
+Model.find_by(args)
+```
+
+## <a name="development"></a>Development and Test
+
+Install the Google Cloud SDK.
+
+    $ curl https://sdk.cloud.google.com | bash
+    
+You can check the version of the SDK and the components installed with:
+
+    $ gcloud components list
+    
+Install the Cloud Datastore Emulator, which provides local emulation of the production Cloud 
+Datastore environment and the gRPC API. However, you'll need to do a small amount of configuration 
+before running the application against the emulator, see [here.](https://cloud.google.com/datastore/docs/tools/datastore-emulator)
+    
+    $ gcloud components install cloud-datastore-emulator 
+    
+Add the following line to your ~/.bash_profile:
+        
+    export PATH="~/google-cloud-sdk/platform/cloud-datastore-emulator:$PATH"
+        
+Restart your shell:
+        
+    exec -l $SHELL    
+
+To create the local development datastore execute the following from the root of the project:
+
+    $ cloud_datastore_emulator create tmp/local_datastore
+    
+To create the local test datastore execute the following from the root of the project:
+    
+    $ cloud_datastore_emulator create tmp/test_datastore
+
+To start the local Cloud Datastore emulator:
+
+    $ ./start-local-datastore.sh
+    
+## <a name="nested"></a>Nested Forms
 
 Adds support for nested attributes to ActiveModel. Heavily inspired by 
 Rails ActiveRecord::NestedAttributes.
@@ -192,88 +333,52 @@ Start by defining within the Recipe model:
 
 Example:
 
-    class Recipe
-      attr_accessor :ingredients
-      validates :ingredients, presence: true
-      validates_associated :ingredients
+```ruby
+class Recipe
+  attr_accessor :ingredients
+  validates :ingredients, presence: true
+  validates_associated :ingredients
 
-      def ingredients_attributes=(attributes)
-        assign_nested_attributes(:ingredients, attributes)
-      end
-    end
+  def ingredients_attributes=(attributes)
+    assign_nested_attributes(:ingredients, attributes)
+  end
+end
+```
 
 You may also set a `:reject_if` proc to silently ignore any new record hashes if they fail to
 pass your criteria. For example:
 
-   class Recipe
-     def ingredients_attributes=(attributes)
-       reject_proc = proc { |attributes| attributes['name'].blank? }
-       assign_nested_attributes(:ingredients, attributes, reject_if: reject_proc)
-     end
+```ruby
+ class Recipe
+   def ingredients_attributes=(attributes)
+     reject_proc = proc { |attributes| attributes['name'].blank? }
+     assign_nested_attributes(:ingredients, attributes, reject_if: reject_proc)
    end
+ end
+```
 
  Alternatively,`:reject_if` also accepts a symbol for using methods:
 
-    class Recipe
-      def ingredients_attributes=(attributes)
-        reject_proc = proc { |attributes| attributes['name'].blank? }
-        assign_nested_attributes(:ingredients, attributes, reject_if: reject_recipes)
-      end
+```ruby
+class Recipe
+  def ingredients_attributes=(attributes)
+    reject_proc = proc { |attributes| attributes['name'].blank? }
+    assign_nested_attributes(:ingredients, attributes, reject_if: reject_recipes)
+  end
 
-      def reject_recipes(attributes)
-        attributes['name'].blank?
-      end
-    end
+  def reject_recipes(attributes)
+    attributes['name'].blank?
+  end
+end
+```
 
 Within the parent model `valid?` will validate the parent and associated children and
 `nested_models` will return the child objects. If the nested form submitted params contained
 a truthy `_destroy` key, the appropriate nested_models will have `marked_for_destruction` set
 to True.
 
-Development Environment
------------------------
+TODO: describe eventual consistency with ancestor queries and entity groups.
 
-Install the Google Cloud SDK.
+TODO: describe indexes.
 
-    $ curl https://sdk.cloud.google.com | bash
-    
-You can check the version of the SDK and the components installed with:
-
-    $ gcloud components list
-    
-Install the Cloud Datastore Emulator, which provides local emulation of the production Cloud 
-Datastore environment and the gRPC API. However, you'll need to do a small amount of configuration 
-before running the application against the emulator, see [here.](https://cloud.google.com/datastore/docs/tools/datastore-emulator)
-    
-    $ gcloud components install cloud-datastore-emulator 
-    
-Add the following line to your ~/.bash_profile:
-        
-    export PATH="~/google-cloud-sdk/platform/cloud-datastore-emulator:$PATH"
-        
-Restart your shell:
-        
-    exec -l $SHELL    
-
-To create the local development datastore execute the following from the root of the project:
-
-    $ cloud_datastore_emulator create tmp/local_datastore
-    
-To create the local test datastore execute the following from the root of the project:
-    
-    $ cloud_datastore_emulator create tmp/test_datastore
-    
-Install the Ruby on Rails dependencies:
-
-    $ bundle install
-    
-Running Locally
----------------
-
-To start the local GCD server:
-
-    $ ./start-local-datastore.sh
-    
-To start the local web server:
-
-    $ rails server
+TODO: describe the change tracking implementation.
