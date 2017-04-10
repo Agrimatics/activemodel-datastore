@@ -7,10 +7,10 @@ Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google
 Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
 with Rails? 
 
-When you want a Rails app backed by a managed, massively-scalable datastore solution. 
- 
-## Status
-Pre-release. 
+When you want a Rails app backed by a managed, massively-scalable datastore solution. Cloud Datastore 
+automatically handles sharding and replication, providing you with a highly available and durable 
+database that scales automatically to handle your applications' load. Cloud Datastore provides a 
+myriad of capabilities such as ACID transactions, SQL-like queries, indexes and much more.
  
 ## Table of contents
  
@@ -20,6 +20,7 @@ Pre-release.
 - [Retrieving Entities](#queries)
 - [Development and Test](#development)
 - [Nested Forms](#nested)
+- [Work In Progress](#wip)
  
 ## <a name="setup"></a>Setup
  
@@ -32,7 +33,7 @@ rails new my_app -O
 To install, add this line to your `Gemfile` and run `bundle install`:
  
 ```ruby
-gem 'activemodel-datastore', github: 'Agrimatics/activemodel-datastore'
+gem 'activemodel-datastore'
 ```
   
 Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API.
@@ -349,12 +350,12 @@ You may also set a `:reject_if` proc to silently ignore any new record hashes if
 pass your criteria. For example:
 
 ```ruby
- class Recipe
-   def ingredients_attributes=(attributes)
-     reject_proc = proc { |attributes| attributes['name'].blank? }
-     assign_nested_attributes(:ingredients, attributes, reject_if: reject_proc)
-   end
+class Recipe
+ def ingredients_attributes=(attributes)
+   reject_proc = proc { |attributes| attributes['name'].blank? }
+   assign_nested_attributes(:ingredients, attributes, reject_if: reject_proc)
  end
+end
 ```
 
  Alternatively,`:reject_if` also accepts a symbol for using methods:
@@ -377,8 +378,12 @@ Within the parent model `valid?` will validate the parent and associated childre
 a truthy `_destroy` key, the appropriate nested_models will have `marked_for_destruction` set
 to True.
 
-TODO: describe eventual consistency with ancestor queries and entity groups.
+## <a name="wip"></a>Work In Progress
 
-TODO: describe indexes.
+TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
 
-TODO: describe the change tracking implementation.
+TODO: document indexes.
+
+TODO: document using the datastore emulator to generate the index.yaml.
+
+TODO: document the change tracking implementation.
