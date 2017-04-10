@@ -1,6 +1,7 @@
 Gemfile.lock
 tmp/*
 !tmp/.keep
+pkg
 
 # RubyMine project files
 /.idea/*
