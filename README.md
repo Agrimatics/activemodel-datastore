@@ -17,6 +17,7 @@ database that scales automatically to handle your applications' load.
 - [Model Example](#model)
 - [Controller Example](#controller)
 - [Retrieving Entities](#queries)
+- [Example Rails App](#rails)
 - [Development and Test](#development)
 - [Nested Forms](#nested)
 - [Work In Progress](#wip)
@@ -171,7 +172,7 @@ end
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
 and returns results with a cursor.
 ```ruby
-users = User.all
+users = User.all(options = {})
 
 parent = CloudDatastore.dataset.key('Parent', 12345)
 users = User.all(ancestor: parent)
@@ -210,6 +211,10 @@ user = User.find_by(name: 'Joe')
 
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
+
+## <a name="rails"></a>Example Rails App
+
+There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app) 
 
 ## <a name="development"></a>Development and Test
 
