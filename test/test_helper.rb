@@ -27,7 +27,7 @@ class MockModel
   enable_change_tracking :name, :role
 
   def entity_properties
-    %w(name role)
+    %w[name role]
   end
 end
 
@@ -59,7 +59,7 @@ class ActiveSupport::TestCase
   end
 
   def delete_all_test_entities!
-    entity_kinds = %w(MockModelParent MockModel)
+    entity_kinds = %w[MockModelParent MockModel]
     entity_kinds.each do |kind|
       query = CloudDatastore.dataset.query(kind)
       loop do

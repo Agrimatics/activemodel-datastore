@@ -15,7 +15,7 @@ class Recipe
   enable_change_tracking :amount, :name
 
   def entity_properties
-    %w(amount name)
+    %w[amount name]
   end
 
   def set_default_values

@@ -29,11 +29,42 @@ module ActiveModel::Datastore
     # original float of 25.0. Call this method after valid? to allow for any type coercing
     # occurring before saving to datastore.
     #
-    # For example, consider the scenario in which the user submits an unchanged form value:
-    # The initial value is a float, which during assign_attributes is set to a string and
-    # then coerced back to a float during a validation callback.
+    # Consider the scenario in which the user submits an unchanged form value named `area`.
+    # The initial value from datastore is a float of 25.0, which during assign_attributes
+    # is set to a string of '25.0'. It is then coerced back to a float of 25.0 during a
+    # validation callback. The area_changed? will return true, yet the value is back where
+    # is started.
     #
-    # If none of the tracked attributes have changed, exclude_from_save is set to true.
+    # For example:
+    #
+    #   class Shapes
+    #     include ActiveModel::Datastore
+    #
+    #     attr_accessor :area
+    #     enable_change_tracking :area
+    #     after_validation :format_values
+    #
+    #     def format_values
+    #       format_property_value :area, :float
+    #     end
+    #
+    #     def update(params)
+    #       assign_attributes(params)
+    #       if valid?
+    #         puts values_changed?
+    #         puts area_changed?
+    #         p area_change
+    #       end
+    #     end
+    #   end
+    #
+    # Will result in this:
+    #   values_changed? false
+    #   area_changed? true # This is correct, as area was changed but the value is identical.
+    #   area_change [0, 0]
+    #
+    # If none of the tracked attributes have changed, the `exclude_from_save` attribute is
+    # set to true and the method returns false.
     #
     def values_changed?
       unless tracked_attributes.present?
