@@ -9,8 +9,7 @@ with Rails?
 
 When you want a Rails app backed by a managed, massively-scalable datastore solution. Cloud Datastore 
 automatically handles sharding and replication, providing you with a highly available and durable 
-database that scales automatically to handle your applications' load. Cloud Datastore provides a 
-myriad of capabilities such as ACID transactions, SQL-like queries, indexes and much more.
+database that scales automatically to handle your applications' load.
  
 ## Table of contents
  
@@ -169,53 +168,20 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
-You can retrieve entities from datastore using the following class methods:
-
+Queries entities using the provided options. When a limit option is provided queries up to the limit 
+and returns results with a cursor.
 ```ruby
-##
-# Retrieves an entity by id or name and by an optional parent.
-#
-# @param [Integer or String] id_or_name The id or name value of the entity Key.
-# @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
-#
-# @return [Entity, nil] a Google::Cloud::Datastore::Entity object or nil.
-#
-Model.find_entity(id_or_name, parent = nil)
+users = User.all
 
+parent = CloudDatastore.dataset.key('Parent', 12345)
+users = User.all(ancestor: parent)
 
-##
-# Retrieves the entities for the provided ids by key and by an optional parent.
-# The find_all method returns LookupResults, which is a special case Array with
-# additional values. LookupResults are returned in batches, and the batch size is
-# determined by the Datastore API. Batch size is not guaranteed. It will be affected
-# by the size of the data being returned, and by other forces such as how distributed
-# and/or consistent the data in Datastore is. Calling `all` on the LookupResults retrieves
-# all results by repeatedly loading #next until #next? returns false. The `all` method
-# returns an enumerator unless passed a block. We iterate on the enumerator to return
-# the model entity objects.
-#
-# @param [Integer, String] ids_or_names One or more ids to retrieve.
-# @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
-#
-# @return [Array<Entity>] an array of Google::Cloud::Datastore::Entity objects.
-#
-Model.find_entities(*ids_or_names, parent: nil)
+users = User.all(ancestor: parent, where: ['name', '=', 'Bryce'])
 
+users = User.all(where: [['name', '=', 'Ian'], ['enabled', '=', true]])
 
-##
-# Queries entities from Cloud Datastore by named kind and using the provided options.
-# When a limit option is provided queries up to the limit and returns results with a cursor.
-#
-# This method may make several API calls until all query results are retrieved. The `run`
-# method returns a QueryResults object, which is a special case Array with additional values.
-# QueryResults are returned in batches, and the batch size is determined by the Datastore API.
-# Batch size is not guaranteed. It will be affected by the size of the data being returned,
-# and by other forces such as how distributed and/or consistent the data in Datastore is.
-# Calling `all` on the QueryResults retrieves all results by repeatedly loading #next until
-# #next? returns false. The `all` method returns an enumerator which from_entities iterates on.
-#
-# Be sure to use as narrow a search criteria as possible. Please use with caution.
-#
+users, cursor = User.all(limit: 7)
+
 # @param [Hash] options The options to construct the query with.
 #
 # @option options [Google::Cloud::Datastore::Key] :ancestor Filter for inherited results.
@@ -224,45 +190,25 @@ Model.find_entities(*ids_or_names, parent: nil)
 # @option options [String] :order Sort the results by property name.
 # @option options [String] :desc_order Sort the results by descending property name.
 # @option options [Array] :select Retrieve only select properties from the matched entities.
-# @option options [Array] :where Adds a property filter of arrays in the format
-#   [name, operator, value].
-#
-# @return [Array<Model>, String] An array of ActiveModel results
-#
-# or if options[:limit] was provided:
-#
-# @return [Array<Model>, String] An array of ActiveModel results and a cursor that
-#   can be used to query for additional results.
-#
-Model.all(options = {})
+# @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
+```
 
+Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6), or an array of ids ([5, 6, 10]). 
+The parent key is optional.
+```ruby
+user = User.find(1)
 
-##
-# Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6),
-# or an array of ids ([5, 6, 10]). The parent key is optional.
-#
-# @param [Integer] ids One or more ids to retrieve.
-# @param [Google::Cloud::Datastore::Key] parent The parent key of the entity.
-#
-# @return [Model, nil] An ActiveModel object or nil for a single id.
-# @return [Array<Model>] An array of ActiveModel objects for more than one id.
-#
-Model.find(*ids, parent: nil)
+parent = CloudDatastore.dataset.key('Parent', 12345)
+user = User.find(1, parent: parent)
 
+users = User.find(1, 2, 3)
+```
 
-##
-# Finds the first entity matching the specified condition.
-#
-# @param [Hash] args In which the key is the property and the value is the value to look for.
-# @option args [Google::Cloud::Datastore::Key] :ancestor filter for inherited results
-#
-# @return [Model, nil] An ActiveModel object or nil.
-#
-# @example
-#   User.find_by(name: 'Joe')
-#   User.find_by(name: 'Bryce', ancestor: parent)
-#
-Model.find_by(args)
+Finds the first entity matching the specified condition.
+```ruby
+user = User.find_by(name: 'Joe')
+
+user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
 
 ## <a name="development"></a>Development and Test
