@@ -12,3 +12,4 @@ pkg
 /test/support/datastore_example_rails_app/tmp/*
 !/test/support/datastore_example_rails_app/tmp/.keep
 /test/support/datastore_example_rails_app/public/assets/*
+!/test/support/datastore_example_rails_app/Gemfile.lock

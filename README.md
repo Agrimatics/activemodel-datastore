@@ -17,8 +17,8 @@ database that scales automatically to handle your applications' load.
 - [Model Example](#model)
 - [Controller Example](#controller)
 - [Retrieving Entities](#queries)
+- [Datastore Emulator](#emulator)
 - [Example Rails App](#rails)
-- [Development and Test](#development)
 - [Nested Forms](#nested)
 - [Work In Progress](#wip)
  
@@ -212,10 +212,6 @@ user = User.find_by(name: 'Joe')
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
 
-## <a name="rails"></a>Example Rails App
-
-There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app) 
-
 ## <a name="development"></a>Development and Test
 
 Install the Google Cloud SDK.
@@ -252,6 +248,20 @@ To start the local Cloud Datastore emulator:
 
     $ ./start-local-datastore.sh
     
+## <a name="rails"></a>Example Rails App
+
+There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app).
+
+ ```bash
+ $ bundle
+ $ cloud_datastore_emulator create tmp/local_datastore
+ $ cloud_datastore_emulator create tmp/test_datastore
+ $ ./start-local-datastore.sh
+ $ rails s
+ ```
+ 
+ Navigate to http://localhost:3000.
+
 ## <a name="nested"></a>Nested Forms
 
 Adds support for nested attributes to ActiveModel. Heavily inspired by 
