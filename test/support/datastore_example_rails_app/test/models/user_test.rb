@@ -7,9 +7,9 @@ class UserTest < ActiveSupport::TestCase
     assert user.invalid?
     assert user.errors[:name].any?
     assert user.errors[:email].any?
-    assert user.errors[:role].any?
-    assert_equal 3, user.errors.messages.size
+    assert_equal 2, user.errors.messages.size
     assert user.enabled
+    assert_equal 1, user.role
   end
 
   test 'user values should be formatted correctly' do

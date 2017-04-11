@@ -19,6 +19,7 @@ class User
 
   def set_default_values
     default_property_value :enabled, true
+    default_property_value :role, 1
   end
 
   def format_values
