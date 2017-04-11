@@ -30,6 +30,8 @@ Generate your Rails app without ActiveRecord:
 rails new my_app -O
 ```
 
+You can remove the db/ directory as it won't be needed.
+
 To install, add this line to your `Gemfile` and run `bundle install`:
  
 ```ruby
@@ -58,6 +60,11 @@ SERVICE_ACCOUNT_CLIENT_EMAIL = web-app@app-name.iam.gserviceaccount.com
 ```
 
 On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
+
+Active Model Datastore will then handle the authentication for you, and the datastore instance can 
+be accessed with `CloudDatastore.dataset`.
+
+There is also an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
  
