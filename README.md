@@ -212,7 +212,7 @@ user = User.find_by(name: 'Joe')
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
 
-## <a name="development"></a>Development and Test
+## <a name="emulator"></a>Datastore Emulator
 
 Install the Google Cloud SDK.
 
