@@ -246,7 +246,7 @@ To create the local test datastore execute the following from the root of the pr
 
 To start the local Cloud Datastore emulator:
 
-    $ ./start-local-datastore.sh
+    $ cloud_datastore_emulator start --port=8180 tmp/local_datastore
     
 ## <a name="rails"></a>Example Rails App
 
