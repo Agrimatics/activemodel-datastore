@@ -38,9 +38,13 @@ To install, add this line to your `Gemfile` and run `bundle install`:
 gem 'activemodel-datastore'
 ```
   
-Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API.
+Create a Google Cloud account [here](https://cloud.google.com) and create a project.
+
+Google Cloud requires the Project ID and Service Account Credentials to connect to the Datastore API.
  
-*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to use the Google Cloud Datastore API.*
+*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to enable the 
+Google Cloud Datastore API. You will create a service account with the role of editor and generate 
+json credentials.*
 
 Set your project id in an `ENV` variable named `GCLOUD_PROJECT`.
 
@@ -53,6 +57,7 @@ To locate your project ID:
 When running on Google Cloud Platform environments the Service Account credentials will be discovered automatically. 
 When running on other environments (such as AWS or Heroku), the Service Account credentials need to be 
 specified in two additional `ENV` variables named `SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`.
+The values for these two `ENV` variables will be in the downloaded service account json file. 
 
 ```bash
 SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
@@ -64,7 +69,7 @@ On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
 Active Model Datastore will then handle the authentication for you, and the datastore instance can 
 be accessed with `CloudDatastore.dataset`.
 
-There is also an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
+There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
  
