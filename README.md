@@ -17,11 +17,13 @@ database that scales automatically to handle your applications' load.
 - [Model Example](#model)
 - [Controller Example](#controller)
 - [Retrieving Entities](#queries)
+- [Datastore Consistency](#consistency)
+- [Datastore Indexes](#indexes)
 - [Datastore Emulator](#emulator)
 - [Example Rails App](#rails)
+- [Track Changes](#track_changes)
 - [Nested Forms](#nested)
 - [Datastore Gotchas](#gotchas)
-- [Work In Progress](#wip)
  
 ## <a name="setup"></a>Setup
  
@@ -80,10 +82,10 @@ Let's start by implementing the model:
 class User
   include ActiveModel::Datastore
 
-  attr_accessor :email, :name, :enabled, :state
+  attr_accessor :email, :enabled, :name, :role, :state
 
   def entity_properties
-    %w[email name enabled]
+    %w[email enabled name role]
   end
 end
 ```
@@ -107,13 +109,13 @@ Validations work as you would expect:
 class User
   include ActiveModel::Datastore
 
-  attr_accessor :email, :name, :enabled, :state
+  attr_accessor :email, :enabled, :name, :role, :state
 
   validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
 
   def entity_properties
-    %w[email name enabled]
+    %w[email enabled name role]
   end
 end
 ```
@@ -126,22 +128,25 @@ and type cast the format of values through [`format_property_value`](http://www.
 class User
   include ActiveModel::Datastore
 
-  attr_accessor :email, :name, :enabled, :state
+  attr_accessor :email, :enabled, :name, :role, :state
 
   before_validation :set_default_values
   after_validation :format_values
+  
   before_save { puts '** something can happen before save **'}
   after_save { puts '** something can happen after save **'}
 
   validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
+  validates :role, presence: true
 
   def entity_properties
-    %w[email name enabled]
+    %w[email enabled name role]
   end
 
   def set_default_values
     default_property_value :enabled, true
+    default_property_value :role, 1
   end
 
   def format_values
@@ -263,6 +268,49 @@ user = User.find_by(name: 'Bryce', ancestor: parent)
 Cloud Datastore has excellent documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
 work, and pay special attention to the the [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
 
+## <a name="consistency"></a>Datastore Consistency
+
+TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
+
+## <a name="indexes"></a>Datastore Indexes
+
+Every cloud datastore query requires an index. Yes, you read that correctly. Every single one. The 
+indexes contain entity keys in a sequence specified by the index's properties and, optionally, 
+the entity's ancestors.
+
+There are two types of indexes, *built-in* and *composite*.
+
+#### Built-in
+By default, Cloud Datastore automatically predefines an index for each property of each entity kind. 
+These single property indexes are suitable for simple types of queries. These indexes are free and
+do not count against your index limit.
+
+#### Composite
+Composite index multiple property values per indexed entity. Composite indexes support complex 
+queries and are defined in an index.yaml file.
+
+Composite indexes are required for queries of the following form:
+
+* queries with ancestor and inequality filters
+* queries with one or more inequality filters on a property and one or more equality filters on other properties
+* queries with a sort order on keys in descending order
+* queries with multiple sort orders
+* queries with one or more filters and one or more sort orders
+
+*NOTE*: Inequality filters are LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL.
+
+Google has excellent doc regarding datastore indexes [here](https://cloud.google.com/datastore/docs/concepts/indexes).
+
+The datastore emulator generates composite indexes in an index.yaml file automatically. The file
+can be found in /tmp/local_datastore/WEB-INF/index.yaml. If your localhost Rails app exercises every 
+possible query the application will issue, using every combination of filter and sort order, the 
+generated entries will represent your complete set of indexes.
+
+One thing to note is that the datastore emulator caches indexes. As you add and modify application 
+code you might find that the local datastore index.yaml contains indexes that are no longer needed. 
+In this scenario try deleting the index.yaml and restarting the emulator. Navigate through your Rails
+app and the index.yaml will be built from scratch.
+
 ## <a name="emulator"></a>Datastore Emulator
 
 Install the Google Cloud SDK.
@@ -312,6 +360,10 @@ There is an example Rails 5 app in the test directory [here](https://github.com/
  ```
  
  Navigate to http://localhost:3000.
+
+## <a name="track_changes"></a>Track Changes
+
+TODO: document the change tracking implementation.
 
 ## <a name="nested"></a>Nested Forms
 
@@ -396,13 +448,3 @@ When a query does not specify a sort order, the results are returned in the orde
 As Cloud Datastore implementation evolves (or if a project's indexes change), this order may change. 
 Therefore, if your application requires its query results in a particular order, be sure to specify 
 that sort order explicitly in the query.
-
-## <a name="wip"></a>Work In Progress
-
-TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
-
-TODO: document indexes.
-
-TODO: document using the datastore emulator to generate the index.yaml.
-
-TODO: document the change tracking implementation.
