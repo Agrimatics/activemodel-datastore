@@ -214,7 +214,7 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
-####[all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
+#### [all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
 and returns results with a cursor.
 ```ruby
@@ -240,7 +240,7 @@ users, cursor = User.all(limit: 7)
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```
 
-####[find(*ids, parent: nil)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find)
+#### [find(*ids, parent: nil)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find)
 Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6), or an array of ids ([5, 6, 10]). 
 The parent key is optional.
 ```ruby
@@ -252,7 +252,7 @@ user = User.find(1, parent: parent)
 users = User.find(1, 2, 3)
 ```
 
-####[find_by(args)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find_by)
+#### [find_by(args)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find_by)
 Finds the first entity matching the specified condition.
 ```ruby
 user = User.find_by(name: 'Joe')
