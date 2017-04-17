@@ -24,6 +24,9 @@ Style/EmptyMethod:
 Style/SymbolArray:
   EnforcedStyle: brackets
 
+Style/WordArray:
+  EnforcedStyle: percent
+
 Metrics/LineLength:
   Max: 100
 

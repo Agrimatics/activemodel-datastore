@@ -17,10 +17,13 @@ database that scales automatically to handle your applications' load.
 - [Model Example](#model)
 - [Controller Example](#controller)
 - [Retrieving Entities](#queries)
+- [Datastore Consistency](#consistency)
+- [Datastore Indexes](#indexes)
+- [Datastore Emulator](#emulator)
 - [Example Rails App](#rails)
-- [Development and Test](#development)
+- [Track Changes](#track_changes)
 - [Nested Forms](#nested)
-- [Work In Progress](#wip)
+- [Datastore Gotchas](#gotchas)
  
 ## <a name="setup"></a>Setup
  
@@ -30,15 +33,21 @@ Generate your Rails app without ActiveRecord:
 rails new my_app -O
 ```
 
+You can remove the db/ directory as it won't be needed.
+
 To install, add this line to your `Gemfile` and run `bundle install`:
  
 ```ruby
 gem 'activemodel-datastore'
 ```
   
-Google Cloud requires a Project ID and Service Account Credentials to connect to the Datastore API.
+Create a Google Cloud account [here](https://cloud.google.com) and create a project.
+
+Google Cloud requires the Project ID and Service Account Credentials to connect to the Datastore API.
  
-*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to use the Google Cloud Datastore API.*
+*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to enable the 
+Google Cloud Datastore API. You will create a service account with the role of editor and generate 
+json credentials.*
 
 Set your project id in an `ENV` variable named `GCLOUD_PROJECT`.
 
@@ -51,6 +60,7 @@ To locate your project ID:
 When running on Google Cloud Platform environments the Service Account credentials will be discovered automatically. 
 When running on other environments (such as AWS or Heroku), the Service Account credentials need to be 
 specified in two additional `ENV` variables named `SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`.
+The values for these two `ENV` variables will be in the downloaded service account json file. 
 
 ```bash
 SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
@@ -58,6 +68,11 @@ SERVICE_ACCOUNT_CLIENT_EMAIL = web-app@app-name.iam.gserviceaccount.com
 ```
 
 On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
+
+Active Model Datastore will then handle the authentication for you, and the datastore instance can 
+be accessed with `CloudDatastore.dataset`.
+
+There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
  
@@ -67,21 +82,71 @@ Let's start by implementing the model:
 class User
   include ActiveModel::Datastore
 
-  attr_accessor :email, :name, :enabled, :state
+  attr_accessor :email, :enabled, :name, :role, :state
 
-  before_validation :set_default_values
-  before_save { puts '** something can happen before save **'}
-  after_save { puts '** something can happen after save **'}
+  def entity_properties
+    %w[email enabled name role]
+  end
+end
+```
+
+Data objects in Cloud Datastore are known as entities. Entities are of a kind. An entity has one 
+or more named properties, each of which can have one or more values. Think of them like this:
+* 'Kind' (which is your table and the name of your Rails model)
+* 'Entity' (which is the record from the table)
+* 'Property' (which is the attribute of the record)
+
+The `entity_properties` method defines an Array of properties that belong to the entity in cloud 
+datastore. Define the attributes of your model using `attr_accessor`. With this approach, Rails 
+deals solely with ActiveModel objects. The objects are converted to/from entities automatically 
+during save/query operations. You can still use virtual attributes on the model (such as the 
+`:state` attribute above) by simply excluding it from `entity_properties`. In this example state 
+is available to the model but won't be persisted with the entity in datastore.
+
+Validations work as you would expect:
+
+```ruby
+class User
+  include ActiveModel::Datastore
+
+  attr_accessor :email, :enabled, :name, :role, :state
 
   validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
   validates :name, presence: true, length: { maximum: 30 }
 
   def entity_properties
-    %w[email name enabled]
+    %w[email enabled name role]
+  end
+end
+```
+
+Callbacks work as you would expect. We have also added the ability to set default values through 
+[`default_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:default_property_value) 
+and type cast the format of values through [`format_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:format_property_value):
+
+```ruby
+class User
+  include ActiveModel::Datastore
+
+  attr_accessor :email, :enabled, :name, :role, :state
+
+  before_validation :set_default_values
+  after_validation :format_values
+  
+  before_save { puts '** something can happen before save **'}
+  after_save { puts '** something can happen after save **'}
+
+  validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+  validates :name, presence: true, length: { maximum: 30 }
+  validates :role, presence: true
+
+  def entity_properties
+    %w[email enabled name role]
   end
 
   def set_default_values
     default_property_value :enabled, true
+    default_property_value :role, 1
   end
 
   def format_values
@@ -89,21 +154,6 @@ class User
   end
 end
 ```
-
-Using `attr_accessor` the attributes of the model are defined. Validations and Callbacks all work 
-as you would expect. However, `entity_properties` is new. Data objects in Cloud Datastore
-are known as entities. Entities are of a kind. An entity has one or more named properties, each
-of which can have one or more values. Think of them like this:
-* 'Kind' (which is your table)
-* 'Entity' (which is the record from the table)
-* 'Property' (which is the attribute of the record)
-
-The `entity_properties` method defines an Array of the properties that belong to the entity in
-cloud datastore. With this approach, Rails deals solely with ActiveModel objects. The objects are
-converted to/from entities as needed during save/query operations.
-
-We have also added the ability to set default property values and type cast the format of values
-for entities.
 
 ## <a name="controller"></a>Controller Example
 
@@ -169,6 +219,7 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
+#### [all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
 and returns results with a cursor.
 ```ruby
@@ -194,6 +245,7 @@ users, cursor = User.all(limit: 7)
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```
 
+#### [find(*ids, parent: nil)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find)
 Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6), or an array of ids ([5, 6, 10]). 
 The parent key is optional.
 ```ruby
@@ -205,6 +257,7 @@ user = User.find(1, parent: parent)
 users = User.find(1, 2, 3)
 ```
 
+#### [find_by(args)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find_by)
 Finds the first entity matching the specified condition.
 ```ruby
 user = User.find_by(name: 'Joe')
@@ -212,11 +265,53 @@ user = User.find_by(name: 'Joe')
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
 
-## <a name="rails"></a>Example Rails App
+Cloud Datastore has excellent documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
+work, and pay special attention to the the [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
 
-There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app) 
+## <a name="consistency"></a>Datastore Consistency
 
-## <a name="development"></a>Development and Test
+TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
+
+## <a name="indexes"></a>Datastore Indexes
+
+Every cloud datastore query requires an index. Yes, you read that correctly. Every single one. The 
+indexes contain entity keys in a sequence specified by the index's properties and, optionally, 
+the entity's ancestors.
+
+There are two types of indexes, *built-in* and *composite*.
+
+#### Built-in
+By default, Cloud Datastore automatically predefines an index for each property of each entity kind. 
+These single property indexes are suitable for simple types of queries. These indexes are free and
+do not count against your index limit.
+
+#### Composite
+Composite index multiple property values per indexed entity. Composite indexes support complex 
+queries and are defined in an index.yaml file.
+
+Composite indexes are required for queries of the following form:
+
+* queries with ancestor and inequality filters
+* queries with one or more inequality filters on a property and one or more equality filters on other properties
+* queries with a sort order on keys in descending order
+* queries with multiple sort orders
+* queries with one or more filters and one or more sort orders
+
+*NOTE*: Inequality filters are LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL.
+
+Google has excellent doc regarding datastore indexes [here](https://cloud.google.com/datastore/docs/concepts/indexes).
+
+The datastore emulator generates composite indexes in an index.yaml file automatically. The file
+can be found in /tmp/local_datastore/WEB-INF/index.yaml. If your localhost Rails app exercises every 
+possible query the application will issue, using every combination of filter and sort order, the 
+generated entries will represent your complete set of indexes.
+
+One thing to note is that the datastore emulator caches indexes. As you add and modify application 
+code you might find that the local datastore index.yaml contains indexes that are no longer needed. 
+In this scenario try deleting the index.yaml and restarting the emulator. Navigate through your Rails
+app and the index.yaml will be built from scratch.
+
+## <a name="emulator"></a>Datastore Emulator
 
 Install the Google Cloud SDK.
 
@@ -250,8 +345,26 @@ To create the local test datastore execute the following from the root of the pr
 
 To start the local Cloud Datastore emulator:
 
-    $ ./start-local-datastore.sh
+    $ cloud_datastore_emulator start --port=8180 tmp/local_datastore
     
+## <a name="rails"></a>Example Rails App
+
+There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app).
+
+ ```bash
+ $ bundle
+ $ cloud_datastore_emulator create tmp/local_datastore
+ $ cloud_datastore_emulator create tmp/test_datastore
+ $ ./start-local-datastore.sh
+ $ rails s
+ ```
+ 
+ Navigate to http://localhost:3000.
+
+## <a name="track_changes"></a>Track Changes
+
+TODO: document the change tracking implementation.
+
 ## <a name="nested"></a>Nested Forms
 
 Adds support for nested attributes to ActiveModel. Heavily inspired by 
@@ -329,12 +442,9 @@ Within the parent model `valid?` will validate the parent and associated childre
 a truthy `_destroy` key, the appropriate nested_models will have `marked_for_destruction` set
 to True.
 
-## <a name="wip"></a>Work In Progress
-
-TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
-
-TODO: document indexes.
-
-TODO: document using the datastore emulator to generate the index.yaml.
-
-TODO: document the change tracking implementation.
+## <a name="gotchas"></a>Datastore Gotchas
+#### Ordering of query results is undefined when no sort order is specified.
+When a query does not specify a sort order, the results are returned in the order they are retrieved. 
+As Cloud Datastore implementation evolves (or if a project's indexes change), this order may change. 
+Therefore, if your application requires its query results in a particular order, be sure to specify 
+that sort order explicitly in the query.

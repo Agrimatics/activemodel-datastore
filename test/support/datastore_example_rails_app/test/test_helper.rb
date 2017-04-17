@@ -29,6 +29,7 @@ end
 # Make the methods within EntityTestExtensions available as class methods.
 MockModel.send :extend, EntityClassMethodExtensions
 MockModelParent.send :extend, EntityClassMethodExtensions
+User.send :extend, EntityClassMethodExtensions
 
 class ActiveSupport::TestCase
   include FactoryGirl::Syntax::Methods
@@ -48,7 +49,7 @@ class ActiveSupport::TestCase
   end
 
   def delete_all_test_entities!
-    entity_kinds = %w[MockModelParent MockModel]
+    entity_kinds = %w[MockModelParent MockModel User]
     entity_kinds.each do |kind|
       query = CloudDatastore.dataset.query(kind)
       loop do

@@ -1,4 +1,6 @@
 class Recipe
+  include ActiveModel::Datastore
+
   attr_accessor :amount               # Float
   attr_accessor :name                 # String
   attr_accessor :ingredients          # gives us 'accepts_nested_attributes_for' like functionality
