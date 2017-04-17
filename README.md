@@ -20,6 +20,7 @@ database that scales automatically to handle your applications' load.
 - [Datastore Emulator](#emulator)
 - [Example Rails App](#rails)
 - [Nested Forms](#nested)
+- [Datastore Gotchas](#gotchas)
 - [Work In Progress](#wip)
  
 ## <a name="setup"></a>Setup
@@ -81,7 +82,54 @@ class User
 
   attr_accessor :email, :name, :enabled, :state
 
+  def entity_properties
+    %w[email name enabled]
+  end
+end
+```
+
+Data objects in Cloud Datastore are known as entities. Entities are of a kind. An entity has one 
+or more named properties, each of which can have one or more values. Think of them like this:
+* 'Kind' (which is your table and the name of your Rails model)
+* 'Entity' (which is the record from the table)
+* 'Property' (which is the attribute of the record)
+
+The `entity_properties` method defines an Array of properties that belong to the entity in cloud 
+datastore. Define the attributes of your model using `attr_accessor`. With this approach, Rails 
+deals solely with ActiveModel objects. The objects are converted to/from entities automatically 
+during save/query operations. You can still use virtual attributes on the model (such as the 
+`:state` attribute above) by simply excluding it from `entity_properties`. In this example state 
+is available to the model but won't be persisted with the entity in datastore.
+
+Validations work as you would expect:
+
+```ruby
+class User
+  include ActiveModel::Datastore
+
+  attr_accessor :email, :name, :enabled, :state
+
+  validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
+  validates :name, presence: true, length: { maximum: 30 }
+
+  def entity_properties
+    %w[email name enabled]
+  end
+end
+```
+
+Callbacks work as you would expect. We have also added the ability to set default values through 
+[`default_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:default_property_value) 
+and type cast the format of values through [`format_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:format_property_value):
+
+```ruby
+class User
+  include ActiveModel::Datastore
+
+  attr_accessor :email, :name, :enabled, :state
+
   before_validation :set_default_values
+  after_validation :format_values
   before_save { puts '** something can happen before save **'}
   after_save { puts '** something can happen after save **'}
 
@@ -101,21 +149,6 @@ class User
   end
 end
 ```
-
-Using `attr_accessor` the attributes of the model are defined. Validations and Callbacks all work 
-as you would expect. However, `entity_properties` is new. Data objects in Cloud Datastore
-are known as entities. Entities are of a kind. An entity has one or more named properties, each
-of which can have one or more values. Think of them like this:
-* 'Kind' (which is your table)
-* 'Entity' (which is the record from the table)
-* 'Property' (which is the attribute of the record)
-
-The `entity_properties` method defines an Array of the properties that belong to the entity in
-cloud datastore. With this approach, Rails deals solely with ActiveModel objects. The objects are
-converted to/from entities as needed during save/query operations.
-
-We have also added the ability to set default property values and type cast the format of values
-for entities.
 
 ## <a name="controller"></a>Controller Example
 
@@ -181,6 +214,7 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
+####[all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
 and returns results with a cursor.
 ```ruby
@@ -206,6 +240,7 @@ users, cursor = User.all(limit: 7)
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```
 
+####[find(*ids, parent: nil)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find)
 Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6), or an array of ids ([5, 6, 10]). 
 The parent key is optional.
 ```ruby
@@ -217,12 +252,16 @@ user = User.find(1, parent: parent)
 users = User.find(1, 2, 3)
 ```
 
+####[find_by(args)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find_by)
 Finds the first entity matching the specified condition.
 ```ruby
 user = User.find_by(name: 'Joe')
 
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
+
+Cloud Datastore has excellent documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
+work, and pay special attention to the the [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
 
 ## <a name="emulator"></a>Datastore Emulator
 
@@ -350,6 +389,13 @@ Within the parent model `valid?` will validate the parent and associated childre
 `nested_models` will return the child objects. If the nested form submitted params contained
 a truthy `_destroy` key, the appropriate nested_models will have `marked_for_destruction` set
 to True.
+
+## <a name="gotchas"></a>Datastore Gotchas
+#### Ordering of query results is undefined when no sort order is specified.
+When a query does not specify a sort order, the results are returned in the order they are retrieved. 
+As Cloud Datastore implementation evolves (or if a project's indexes change), this order may change. 
+Therefore, if your application requires its query results in a particular order, be sure to specify 
+that sort order explicitly in the query.
 
 ## <a name="wip"></a>Work In Progress
 
