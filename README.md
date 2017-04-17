@@ -10,6 +10,8 @@ with Rails?
 When you want a Rails app backed by a managed, massively-scalable datastore solution. Cloud Datastore 
 automatically handles sharding and replication, providing you with a highly available and durable 
 database that scales automatically to handle your applications' load.
+
+[![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
  
 ## Table of contents
  
