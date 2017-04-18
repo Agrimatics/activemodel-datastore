@@ -199,8 +199,8 @@ module ActiveModel::Datastore
   #
   #   def save!
   #     parent = nil
-  #     if account_id.present?
-  #       parent = CloudDatastore.dataset.key 'Parent' + self.class.name, account_id.to_i
+  #     if parent_id.present?
+  #       parent = CloudDatastore.dataset.key 'Parent' + self.class.name, parent_id.to_i
   #     end
   #     msg = 'Failed to save the entity'
   #     save_entity(parent) || raise(ActiveModel::Datastore::EntityNotSavedError, msg)
@@ -210,18 +210,19 @@ module ActiveModel::Datastore
     save_entity || raise(EntityNotSavedError, 'Failed to save the entity')
   end
 
-  def update(params)
+  def update(params, parent = nil)
     assign_attributes(params)
     return unless valid?
     run_callbacks :update do
-      entity = build_entity
+      entity = build_entity(parent)
       self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
     end
   end
 
-  def destroy
+  def destroy(parent = nil)
     run_callbacks :destroy do
       key = CloudDatastore.dataset.key self.class.name, id
+      key.parent = parent if parent.present?
       self.class.retry_on_exception? { CloudDatastore.dataset.delete key }
     end
   end

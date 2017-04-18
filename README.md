@@ -221,6 +221,13 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
+Each entity in Cloud Datastore has a key that uniquely identifies it. The key consists of the 
+following components:
+
+* the kind of the entity, which is User in these examples
+* an identifier for the individual entity, which can be either a a key name string or an integer numeric ID
+* an optional ancestor path locating the entity within the Cloud Datastore hierarchy
+
 #### [all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
 and returns results with a cursor.
@@ -249,7 +256,7 @@ users, cursor = User.all(limit: 7)
 
 #### [find(*ids, parent: nil)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find)
 Find entity by id - this can either be a specific id (1), a list of ids (1, 5, 6), or an array of ids ([5, 6, 10]). 
-The parent key is optional.
+The parent key is optional. This method is a lookup by key and results will be strongly consistent.
 ```ruby
 user = User.find(1)
 
@@ -260,19 +267,55 @@ users = User.find(1, 2, 3)
 ```
 
 #### [find_by(args)](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:find_by)
-Finds the first entity matching the specified condition.
+Queries for the first entity matching the specified condition.
 ```ruby
 user = User.find_by(name: 'Joe')
 
 user = User.find_by(name: 'Bryce', ancestor: parent)
 ```
 
-Cloud Datastore has excellent documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
+Cloud Datastore has documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
 work, and pay special attention to the the [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
 
 ## <a name="consistency"></a>Datastore Consistency
 
-TODO: document datastore eventual consistency and mitigation using ancestor queries and entity groups.
+Cloud Datastore is a non-relational databases, or NoSQL database. It distributes data over many 
+machines and uses synchronous replication over a wide geographic area. Because of this architecture 
+it offers a balance of strong and eventual consistency.
+
+What is eventual consistency?
+
+It means that an updated entity value may not be immediately visible when executing a query. 
+Eventual consistency is a theoretical guarantee that, provided no new updates to an entity are made, 
+all reads of the entity will eventually return the last updated value.
+
+In the context of a Rails app, there are times that eventual consistency is not ideal. For example,
+let's say you create a user entity with a key that looks something like this:
+
+`@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1>`
+
+and then immediately redirect to the index view of users. There is a good chance that your new user 
+is not yet visible in the list. If you perform a refresh on the index view a second or two later 
+the user will appear.
+
+"Wait a minute!" you say. "This is crap!" you say. Fear not! We can make the query of users strongly
+consistent. We just need to use entity groups and ancestor queries. An entity group is a hierarchy 
+formed by a root entity and its children. To create an entity group, you specify an ancestor path 
+for the entity which is a parent key prefixing the child key.
+
+When using the `save` method, pass in a parent key such as CloudDatastore.dataset.key('Company', 12345). 
+The user becomes a child of the company (belonging to the company entity group) and the user key 
+will now look like this:
+
+`@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1, @parent=#<Google::Cloud::Datastore::Key @kind="Company", @id=12345>>`
+
+Then, when we query for the users we will provide the parent key. Ancestor queries are always 
+strongly consistent.
+
+However, there is a small downside. Entities with the same ancestor are limited to 1 write per second.
+The entity group relationship cannot be changed after creating the entity (as you can't change an entity's key).
+
+See here for the Cloud Datastore documentation on [Data Consistency](https://cloud.google.com/datastore/docs/concepts/structuring_for_strong_consistency).
 
 ## <a name="indexes"></a>Datastore Indexes
 

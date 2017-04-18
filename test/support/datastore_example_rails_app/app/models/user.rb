@@ -22,4 +22,8 @@ class User
   def format_values
     format_property_value :role, :integer
   end
+
+  def self.parent_key
+    CloudDatastore.dataset.key('Company', 12345)
+  end
 end
