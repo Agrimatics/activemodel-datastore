@@ -8,8 +8,9 @@ Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.
 with Rails? 
 
 When you want a Rails app backed by a managed, massively-scalable datastore solution. Cloud Datastore 
-automatically handles sharding and replication, providing you with a highly available and durable 
-database that scales automatically to handle your applications' load.
+automatically handles sharding and replication. It is a highly available and durable database that 
+automatically scales to handle your applications' load. Cloud Datastore is a schemaless database 
+suited for unstructured or semi-structured application data.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
  
@@ -235,10 +236,10 @@ and returns results with a cursor.
 ```ruby
 users = User.all(options = {})
 
-parent = CloudDatastore.dataset.key('Parent', 12345)
-users = User.all(ancestor: parent)
+parent_key = CloudDatastore.dataset.key('Parent', 12345)
+users = User.all(ancestor: parent_key)
 
-users = User.all(ancestor: parent, where: ['name', '=', 'Bryce'])
+users = User.all(ancestor: parent_key, where: ['name', '=', 'Bryce'])
 
 users = User.all(where: [['name', '=', 'Ian'], ['enabled', '=', true]])
 
@@ -261,8 +262,8 @@ The parent key is optional. This method is a lookup by key and results will be s
 ```ruby
 user = User.find(1)
 
-parent = CloudDatastore.dataset.key('Parent', 12345)
-user = User.find(1, parent: parent)
+parent_key = CloudDatastore.dataset.key('Parent', 12345)
+user = User.find(1, parent: parent_key)
 
 users = User.find(1, 2, 3)
 ```
@@ -272,7 +273,7 @@ Queries for the first entity matching the specified condition.
 ```ruby
 user = User.find_by(name: 'Joe')
 
-user = User.find_by(name: 'Bryce', ancestor: parent)
+user = User.find_by(name: 'Bryce', ancestor: parent_key)
 ```
 
 Cloud Datastore has documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
