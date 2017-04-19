@@ -9,21 +9,25 @@
 #   class User
 #     include ActiveModel::Datastore
 #
-#     attr_accessor :email, :name, :enabled, :state
+#     attr_accessor :email, :enabled, :name, :role, :state
 #
 #     before_validation :set_default_values
-#     before_save { puts '** something can happen before save **' }
-#     after_save { puts '** something can happen after save **' }
+#     after_validation :format_values
+#
+#     before_save { puts '** something can happen before save **'}
+#     after_save { puts '** something can happen after save **'}
 #
 #     validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i }
 #     validates :name, presence: true, length: { maximum: 30 }
+#     validates :role, presence: true
 #
 #     def entity_properties
-#       %w[email name enabled]
+#       %w[email enabled name role]
 #     end
 #
 #     def set_default_values
 #       default_property_value :enabled, true
+#       default_property_value :role, 1
 #     end
 #
 #     def format_values
@@ -116,11 +120,18 @@ module ActiveModel::Datastore
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
     define_model_callbacks :save, :update, :destroy
-    attr_accessor :id
+    attr_accessor :id, :parent_key_id
   end
 
   def entity_properties
     []
+  end
+
+  ##
+  # Used to determine if the ActiveModel object belongs to an entity group.
+  #
+  def parent?
+    parent_key_id.present?
   end
 
   ##
@@ -177,62 +188,58 @@ module ActiveModel::Datastore
   ##
   # Builds the Cloud Datastore entity with attributes from the Model object.
   #
+  # @param [Google::Cloud::Datastore::Key] parent An optional parent Key of the entity.
+  #
   # @return [Entity] The updated Google::Cloud::Datastore::Entity.
   #
   def build_entity(parent = nil)
     entity = CloudDatastore.dataset.entity self.class.name, id
-    entity.key.parent = parent if parent.present?
+    if parent.present?
+      raise ArgumentError, 'Must be a Key' unless parent.is_a? Google::Cloud::Datastore::Key
+      entity.key.parent = parent
+    elsif parent?
+      entity.key.parent = self.class.parent_key(parent_key_id)
+    end
     entity_properties.each do |attr|
       entity[attr] = instance_variable_get("@#{attr}")
     end
     entity
   end
 
-  def save(parent = nil)
-    save_entity(parent)
+  def save
+    save_entity
   end
 
   ##
   # For compatibility with libraries that require the bang method version (example, factory_girl).
-  # If you require a save! method that supports parents (ancestor queries), override this method
-  # in your own code with something like this:
-  #
-  #   def save!
-  #     parent = nil
-  #     if parent_id.present?
-  #       parent = CloudDatastore.dataset.key 'Parent' + self.class.name, parent_id.to_i
-  #     end
-  #     msg = 'Failed to save the entity'
-  #     save_entity(parent) || raise(ActiveModel::Datastore::EntityNotSavedError, msg)
-  #   end
   #
   def save!
     save_entity || raise(EntityNotSavedError, 'Failed to save the entity')
   end
 
-  def update(params, parent = nil)
+  def update(params)
     assign_attributes(params)
     return unless valid?
     run_callbacks :update do
-      entity = build_entity(parent)
+      entity = build_entity
       self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
     end
   end
 
-  def destroy(parent = nil)
+  def destroy
     run_callbacks :destroy do
       key = CloudDatastore.dataset.key self.class.name, id
-      key.parent = parent if parent.present?
+      key.parent = self.class.parent_key(parent_key_id) if parent?
       self.class.retry_on_exception? { CloudDatastore.dataset.delete key }
     end
   end
 
   private
 
-  def save_entity(parent = nil)
+  def save_entity
     return unless valid?
     run_callbacks :save do
-      entity = build_entity(parent)
+      entity = build_entity
       success = self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
       self.id = entity.key.id if success
       success
@@ -241,6 +248,13 @@ module ActiveModel::Datastore
 
   # Methods defined here will be class methods when 'include ActiveModel::Datastore'.
   module ClassMethods
+    ##
+    # A default parent key for specifying an ancestor path and creating an entity group.
+    #
+    def parent_key(parent_id)
+      CloudDatastore.dataset.key('Parent' + name, parent_id.to_i)
+    end
+
     ##
     # Retrieves an entity by id or name and by an optional parent.
     #
@@ -357,7 +371,7 @@ module ActiveModel::Datastore
     #
     # @example
     #   User.find_by(name: 'Joe')
-    #   User.find_by(name: 'Bryce', ancestor: parent)
+    #   User.find_by(name: 'Bryce', ancestor: parent_key)
     #
     def find_by(args)
       query = CloudDatastore.dataset.query name
@@ -392,6 +406,7 @@ module ActiveModel::Datastore
       model_entity = new
       model_entity.id = entity.key.id unless entity.key.id.nil?
       model_entity.id = entity.key.name unless entity.key.name.nil?
+      model_entity.parent_key_id = entity.key.parent.id if entity.key.parent.present?
       entity.properties.to_hash.each do |name, value|
         model_entity.send "#{name}=", value if model_entity.respond_to? "#{name}="
       end

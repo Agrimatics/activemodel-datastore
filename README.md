@@ -48,8 +48,9 @@ Create a Google Cloud account [here](https://cloud.google.com) and create a proj
 Google Cloud requires the Project ID and Service Account Credentials to connect to the Datastore API.
  
 *Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to enable the 
-Google Cloud Datastore API. You will create a service account with the role of editor and generate 
-json credentials.*
+Google Cloud Datastore API. When running on Google Cloud Platform environments the Service Account 
+credentials will be discovered automatically. When running on other environments (such as AWS or Heroku)
+you need to create a service account with the role of editor and generate json credentials.*
 
 Set your project id in an `ENV` variable named `GCLOUD_PROJECT`.
 
@@ -59,10 +60,10 @@ To locate your project ID:
 2. From the projects list, select the name of your project.
 3. On the left, click Dashboard. The project name and ID are displayed in the Dashboard.
 
-When running on Google Cloud Platform environments the Service Account credentials will be discovered automatically. 
-When running on other environments (such as AWS or Heroku), the Service Account credentials need to be 
-specified in two additional `ENV` variables named `SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`.
-The values for these two `ENV` variables will be in the downloaded service account json file. 
+If you have an external application running on a platform outside of Google Cloud you also need to 
+provide the Service Account credentials. They are specified in two additional `ENV` variables named 
+`SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`. The values for these two `ENV` 
+variables will be in the downloaded service account json credentials file.
 
 ```bash
 SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
@@ -290,7 +291,7 @@ Eventual consistency is a theoretical guarantee that, provided no new updates to
 all reads of the entity will eventually return the last updated value.
 
 In the context of a Rails app, there are times that eventual consistency is not ideal. For example,
-let's say you create a user entity with a key that looks something like this:
+let's say you create a user entity with a key that looks like this:
 
 `@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1>`
 
@@ -301,19 +302,83 @@ the user will appear.
 "Wait a minute!" you say. "This is crap!" you say. Fear not! We can make the query of users strongly
 consistent. We just need to use entity groups and ancestor queries. An entity group is a hierarchy 
 formed by a root entity and its children. To create an entity group, you specify an ancestor path 
-for the entity which is a parent key prefixing the child key.
+for the entity which is a parent key as part of the child key.
 
-When using the `save` method, pass in a parent key such as CloudDatastore.dataset.key('Company', 12345). 
-The user becomes a child of the company (belonging to the company entity group) and the user key 
-will now look like this:
+Before using the `save` method, assign the `parent_key_id` attribute an ID. Let's say that 12345 
+represents the ID of the company that the users belong to. The key of the user entity will now 
+look like this:
 
-`@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1, @parent=#<Google::Cloud::Datastore::Key @kind="Company", @id=12345>>`
+`@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1, @parent=#<Google::Cloud::Datastore::Key @kind="ParentUser", @id=12345>>`
 
-Then, when we query for the users we will provide the parent key. Ancestor queries are always 
-strongly consistent.
+All of the User entities will now belong to an entity group named ParentUser and can be queried by the 
+Company ID. When we query for the users we will provide User.parent_key(12345) as the ancestor option.
+ 
+*Ancestor queries are always strongly consistent.*
 
 However, there is a small downside. Entities with the same ancestor are limited to 1 write per second.
-The entity group relationship cannot be changed after creating the entity (as you can't change an entity's key).
+Also, the entity group relationship cannot be changed after creating the entity (as you can't modify 
+an entity's key after it has been saved).
+
+The Users controller would now look like this:
+
+```ruby
+class UsersController < ApplicationController
+  before_action :set_user, only: [:show, :edit, :update, :destroy]
+
+  def index
+    @users = User.all(ancestor: User.parent_key(12345))
+  end
+
+  def show
+  end
+
+  def new
+    @user = User.new
+  end
+
+  def edit
+  end
+
+  def create
+    @user = User.new(user_params)
+    @user.parent_key_id = 12345
+    respond_to do |format|
+      if @user.save
+        format.html { redirect_to @user, notice: 'User was successfully created.' }
+      else
+        format.html { render :new }
+      end
+    end
+  end
+
+  def update
+    respond_to do |format|
+      if @user.update(user_params)
+        format.html { redirect_to @user, notice: 'User was successfully updated.' }
+      else
+        format.html { render :edit }
+      end
+    end
+  end
+
+  def destroy
+    @user.destroy
+    respond_to do |format|
+      format.html { redirect_to users_url, notice: 'User was successfully destroyed.' }
+    end
+  end
+
+  private
+
+  def set_user
+    @user = User.find(params[:id], parent: User.parent_key(12345))
+  end
+
+  def user_params
+    params.require(:user).permit(:email, :name)
+  end
+end
+```
 
 See here for the Cloud Datastore documentation on [Data Consistency](https://cloud.google.com/datastore/docs/concepts/structuring_for_strong_consistency).
 
@@ -418,7 +483,7 @@ Rails ActiveRecord::NestedAttributes.
 Nested attributes allow you to save attributes on associated records along with the parent.
 It's used in conjunction with fields_for to build the nested form elements.
 
-See Rails ActionView::Helpers::FormHelper::fields_for for more info.
+See Rails [ActionView::Helpers::FormHelper::fields_for](http://api.rubyonrails.org/classes/ActionView/Helpers/FormHelper.html#method-i-fields_for) for more info.
 
 *NOTE*: Unlike ActiveRecord, the way that the relationship is modeled between the parent and
 child is not enforced. With NoSQL the relationship could be defined by any attribute, or with

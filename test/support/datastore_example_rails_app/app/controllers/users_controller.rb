@@ -2,7 +2,7 @@ class UsersController < ApplicationController
   before_action :set_user, only: [:show, :edit, :update, :destroy]
 
   def index
-    @users = User.all(ancestor: User.parent_key)
+    @users = User.all(ancestor: User.parent_key(fake_ancestor))
   end
 
   def show
@@ -17,8 +17,9 @@ class UsersController < ApplicationController
 
   def create
     @user = User.new(user_params)
+    @user.parent_key_id = fake_ancestor
     respond_to do |format|
-      if @user.save(User.parent_key)
+      if @user.save
         format.html { redirect_to @user, notice: 'User was successfully created.' }
       else
         format.html { render :new }
@@ -28,7 +29,7 @@ class UsersController < ApplicationController
 
   def update
     respond_to do |format|
-      if @user.update(user_params, User.parent_key)
+      if @user.update(user_params)
         format.html { redirect_to @user, notice: 'User was successfully updated.' }
       else
         format.html { render :edit }
@@ -37,7 +38,7 @@ class UsersController < ApplicationController
   end
 
   def destroy
-    @user.destroy(User.parent_key)
+    @user.destroy
     respond_to do |format|
       format.html { redirect_to users_url, notice: 'User was successfully destroyed.' }
     end
@@ -46,7 +47,7 @@ class UsersController < ApplicationController
   private
 
   def set_user
-    @user = User.find(params[:id], parent: User.parent_key)
+    @user = User.find(params[:id], parent: User.parent_key(fake_ancestor))
   end
 
   def user_params

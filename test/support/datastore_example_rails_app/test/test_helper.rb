@@ -1,7 +1,6 @@
 ENV['RAILS_ENV'] ||= 'test'
 require File.expand_path('../../config/environment', __FILE__)
 require 'entity_class_method_extensions'
-require 'entity_instance_method_extensions'
 require 'rails/test_help'
 require 'minitest/reporters'
 
@@ -31,9 +30,6 @@ end
 MockModel.send :extend, EntityClassMethodExtensions
 MockModelParent.send :extend, EntityClassMethodExtensions
 User.send :extend, EntityClassMethodExtensions
-
-# Make the methods within EntityInstanceMethodExtensions available as instance methods.
-User.send :include, EntityInstanceMethodExtensions
 
 class ActiveSupport::TestCase
   include FactoryGirl::Syntax::Methods
