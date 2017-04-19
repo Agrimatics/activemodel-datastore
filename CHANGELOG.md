@@ -1,7 +1,8 @@
-### 0.2.0 / 2017-04-17
+### 0.2.0 / 2017-04-19
 
-* Many documentation improvements
-* update and destroy now support entity groups
+* many documentation improvements
+* adding support for creating entity groups through either a parent or parent_key_id
+* example Rails 5 app
 
 ### 0.1.0 / 2017-03-27
 
