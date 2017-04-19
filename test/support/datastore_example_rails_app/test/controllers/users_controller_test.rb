@@ -3,7 +3,7 @@ require 'test_helper'
 class UsersControllerTest < ActionDispatch::IntegrationTest
   def setup
     super
-    @user = create(:user)
+    @user = create(:user, parent_key_id: 12345)
   end
 
   test 'should get index' do

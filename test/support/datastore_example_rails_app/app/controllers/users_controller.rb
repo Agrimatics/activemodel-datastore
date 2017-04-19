@@ -2,7 +2,7 @@ class UsersController < ApplicationController
   before_action :set_user, only: [:show, :edit, :update, :destroy]
 
   def index
-    @users = User.all
+    @users = User.all(ancestor: User.parent_key(fake_ancestor))
   end
 
   def show
@@ -17,6 +17,7 @@ class UsersController < ApplicationController
 
   def create
     @user = User.new(user_params)
+    @user.parent_key_id = fake_ancestor
     respond_to do |format|
       if @user.save
         format.html { redirect_to @user, notice: 'User was successfully created.' }
@@ -46,7 +47,7 @@ class UsersController < ApplicationController
   private
 
   def set_user
-    @user = User.find(params[:id])
+    @user = User.find(params[:id], parent: User.parent_key(fake_ancestor))
   end
 
   def user_params

@@ -18,7 +18,7 @@ require 'action_controller/metal/strong_parameters'
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 FactoryGirl.find_definitions
 
-MOCK_ACCOUNT_ID = 1010101010101010
+MOCK_PARENT_ID = 1010101010101010
 
 class MockModel
   include ActiveModel::Datastore
