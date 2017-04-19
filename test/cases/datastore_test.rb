@@ -105,15 +105,39 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert mock_model.save
     assert_equal count + 1, MockModel.count_test_entities
     assert_not_nil mock_model.id
+    assert_nil mock_model.parent_key_id
   end
 
-  test 'save within entity group' do
+  test 'save with parent' do
+    count = MockModel.count_test_entities
+    parent_key = CloudDatastore.dataset.key('Company', MOCK_PARENT_ID)
+    mock_model = MockModel.new(name: 'Save Test')
+    assert mock_model.save(parent_key)
+    assert_equal count + 1, MockModel.count_test_entities
+    assert_not_nil mock_model.id
+    assert_equal MOCK_PARENT_ID, mock_model.parent_key_id
+    key = CloudDatastore.dataset.key 'MockModel', mock_model.id
+    key.parent = parent_key
+    entity = CloudDatastore.dataset.find key
+    assert_equal mock_model.id, entity.key.id
+    assert_equal 'MockModel', entity.key.kind
+    assert_equal 'Company', entity.key.parent.kind
+    assert_equal MOCK_PARENT_ID, entity.key.parent.id
+  end
+
+  test 'save within default entity group' do
     count = MockModel.count_test_entities
     mock_model = MockModel.new(name: 'Ancestor Test', parent_key_id: MOCK_PARENT_ID)
     assert mock_model.save
     assert_equal count + 1, MockModel.count_test_entities
     assert_not_nil mock_model.id
-    assert_not_nil mock_model.parent_key_id
+    key = CloudDatastore.dataset.key 'MockModel', mock_model.id
+    key.parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_PARENT_ID)
+    entity = CloudDatastore.dataset.find key
+    assert_equal mock_model.id, entity.key.id
+    assert_equal 'MockModel', entity.key.kind
+    assert_equal 'ParentMockModel', entity.key.parent.kind
+    assert_equal MOCK_PARENT_ID, entity.key.parent.id
   end
 
   test 'update' do
@@ -121,9 +145,14 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     id = mock_model.id
     count = MockModel.count_test_entities
     mock_model.update(name: 'different name')
-    assert_equal 'different name', mock_model.name
     assert_equal id, mock_model.id
     assert_equal count, MockModel.count_test_entities
+    key = CloudDatastore.dataset.key 'MockModel', mock_model.id
+    entity = CloudDatastore.dataset.find key
+    assert_equal id, entity.key.id
+    assert_equal 'MockModel', entity.key.kind
+    assert_nil entity.key.parent
+    assert_equal 'different name', entity['name']
   end
 
   test 'update within entity group' do
@@ -131,10 +160,15 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     id = mock_model.id
     count = MockModel.count_test_entities
     mock_model.update(name: 'different name')
-    assert_equal 'different name', mock_model.name
     assert_equal id, mock_model.id
-    assert_equal MOCK_PARENT_ID, mock_model.parent_key_id
     assert_equal count, MockModel.count_test_entities
+    key = CloudDatastore.dataset.key 'MockModel', mock_model.id
+    key.parent = CloudDatastore.dataset.key('ParentMockModel', MOCK_PARENT_ID)
+    entity = CloudDatastore.dataset.find key
+    assert_equal id, entity.key.id
+    assert_equal 'MockModel', entity.key.kind
+    assert_equal 'ParentMockModel', entity.key.parent.kind
+    assert_equal 'different name', entity['name']
   end
 
   test 'destroy' do
