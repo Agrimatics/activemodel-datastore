@@ -1,3 +1,7 @@
+### 0.2.1 / 2017-04-25
+
+* adding support for boolean types to format_property_value
+
 ### 0.2.0 / 2017-04-19
 
 * many documentation improvements
