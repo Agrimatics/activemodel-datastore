@@ -121,7 +121,7 @@ module ActiveModel::Datastore
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
     define_model_callbacks :save, :update, :destroy
-    attr_accessor :id, :parent_key_id
+    attr_accessor :id, :parent_key_id, :entity_property_values
   end
 
   def entity_properties
@@ -361,11 +361,9 @@ module ActiveModel::Datastore
     #
     def from_entity(entity)
       return if entity.nil?
-      model_entity = new
-      model_entity.id = entity.key.id unless entity.key.id.nil?
-      model_entity.id = entity.key.name unless entity.key.name.nil?
-      model_entity.parent_key_id = entity.key.parent.id if entity.key.parent.present?
-      entity.properties.to_hash.each do |name, value|
+      model_entity = build_model(entity)
+      model_entity.entity_property_values = entity.properties.to_h
+      entity.properties.to_h.each do |name, value|
         model_entity.send "#{name}=", value if model_entity.respond_to? "#{name}="
       end
       model_entity.reload!
@@ -488,6 +486,14 @@ module ActiveModel::Datastore
       keys = ids_or_names.map { |id| CloudDatastore.dataset.key name, id }
       keys.map { |key| key.parent = parent } if parent.present?
       retry_on_exception { CloudDatastore.dataset.find_all keys }
+    end
+
+    def build_model(entity)
+      model_entity = new
+      model_entity.id = entity.key.id unless entity.key.id.nil?
+      model_entity.id = entity.key.name unless entity.key.name.nil?
+      model_entity.parent_key_id = entity.key.parent.id if entity.key.parent.present?
+      model_entity
     end
   end
 end

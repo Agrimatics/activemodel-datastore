@@ -349,6 +349,8 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     model_entity = MockModel.from_entity(entity)
     assert model_entity.is_a?(MockModel), model_entity.inspect
     refute model_entity.role_changed?
+    assert model_entity.entity_property_values.is_a? Hash
+    assert_equal model_entity.entity_property_values['name'], 'A Mock Entity'
   end
 
   test 'build query' do
