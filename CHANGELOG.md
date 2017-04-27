@@ -1,3 +1,8 @@
+### 0.2.2 / 2017-04-27
+
+* now store a hash of entity properties during entity to model conversion
+* preparing for CarrierWave file upload support
+
 ### 0.2.1 / 2017-04-25
 
 * adding support for boolean types to format_property_value
