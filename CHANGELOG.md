@@ -1,3 +1,8 @@
+### 0.2.3 / 2017-05-24
+* adding CarrierWave file upload support
+* updating example Cloud Datastore Rails app to 5.1
+* adding image upload example to example Rails app
+
 ### 0.2.2 / 2017-04-27
 
 * now store a hash of entity properties during entity to model conversion
