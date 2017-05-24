@@ -8,6 +8,8 @@ require 'faker'
 
 require 'google/cloud/datastore'
 require 'active_model'
+require 'carrierwave'
+require 'active_model/datastore/carrier_wave_uploader'
 require 'active_model/datastore/connection'
 require 'active_model/datastore/errors'
 require 'active_model/datastore/nested_attr'
@@ -23,12 +25,12 @@ MOCK_PARENT_ID = 1010101010101010
 
 class MockModel
   include ActiveModel::Datastore
-  attr_accessor :name, :role
+  attr_accessor :name, :role, :image, :images
   validates :name, presence: true
   enable_change_tracking :name, :role
 
   def entity_properties
-    %w[name role]
+    %w[name role image images]
   end
 end
 
@@ -53,10 +55,19 @@ class ActiveSupport::TestCase
       sleep 3
     end
     CloudDatastore.dataset
+    CarrierWave.configure do |config|
+      config.reset_config
+      config.storage = :file
+      config.enable_processing = false
+      config.root = File.join(Dir.pwd, 'tmp', 'carrierwave-tests')
+      config.cache_dir = 'carrierwave-cache'
+    end
   end
 
   def teardown
     delete_all_test_entities!
+    FileUtils.rm_rf(CarrierWave::Uploader::Base.root)
+    CarrierWave.configure(&:reset_config)
   end
 
   def delete_all_test_entities!

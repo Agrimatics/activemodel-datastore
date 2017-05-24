@@ -27,6 +27,9 @@ Style/SymbolArray:
 Style/WordArray:
   EnforcedStyle: percent
 
+Style/YodaCondition:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 100
 

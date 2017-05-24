@@ -24,6 +24,7 @@ suited for unstructured or semi-structured application data.
 - [Datastore Indexes](#indexes)
 - [Datastore Emulator](#emulator)
 - [Example Rails App](#rails)
+- [CarrierWave File Uploads](#carrierwave)
 - [Track Changes](#track_changes)
 - [Nested Forms](#nested)
 - [Datastore Gotchas](#gotchas)
@@ -471,6 +472,47 @@ There is an example Rails 5 app in the test directory [here](https://github.com/
  ```
  
  Navigate to http://localhost:3000.
+ 
+## <a name="carrierwave"></a>CarrierWave File Uploads
+
+Active Model Datastore has built in support for [CarrierWave](https://github.com/carrierwaveuploader/carrierwave) 
+which is a simple and extremely flexible way to upload files from Rails applications. You can use 
+different stores, including filesystem and cloud storage such as Google Cloud Storage or AWS.
+
+Simply require `active_model/datastore/carrier_wave_uploader` and extend your model with the 
+CarrierWaveUploader (after including ActiveModel::Datastore). Follow the CarrierWave 
+[instructions](https://github.com/carrierwaveuploader/carrierwave#getting-started) for generating 
+an uploader.
+
+In this example it will be something like:
+
+`rails generate uploader ProfileImage`
+
+Define an attribute on the model for your file(s). You can then mount the uploaders using 
+`mount_uploader` (single file) or `mount_uploaders` (array of files). Don't forget to add the new
+attribute to `entity_properties` and whitelist the attribute in the controller if using strong 
+parameters.
+
+```ruby
+require 'active_model/datastore/carrier_wave_uploader'
+
+class User
+  include ActiveModel::Datastore
+  extend CarrierWaveUploader
+
+  attr_accessor :email, :enabled, :name, :profile_image, :role
+  
+  mount_uploader :profile_image, ProfileImageUploader
+
+  def entity_properties
+    %w[email enabled name profile_image role]
+  end
+end
+```
+
+You will want to add something like this to your Rails form:
+
+`<%= form.file_field :profile_image %>`
 
 ## <a name="track_changes"></a>Track Changes
 

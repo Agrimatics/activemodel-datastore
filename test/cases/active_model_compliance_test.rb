@@ -6,4 +6,7 @@ class ActiveModelComplianceTest < ActiveSupport::TestCase
   def setup
     @model = MockModel.new
   end
+
+  def teardown
+  end
 end
