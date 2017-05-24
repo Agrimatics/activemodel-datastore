@@ -1,7 +1,7 @@
 <%= form_for(@user) do |f| %>
   <% if @user.errors.any? %>
-    <div id="error_explanation">
-      <h2><%= pluralize(@user.errors.count, "error") %> prohibited this user from being saved:</h2>
+    <div id='error_explanation'>
+      <h2><%= pluralize(@user.errors.count, 'error') %> prohibited this user from being saved:</h2>
 
       <ul>
       <% @user.errors.full_messages.each do |message| %>
@@ -20,6 +20,15 @@
     <%= f.label :email, 'Email:' %>
     <%= f.text_field :email, size: 40 %>
   </div>
+
+  <div class="field">
+    <%= f.label :profile_image, class: 'form-control-label' %>
+    <%= f.file_field :profile_image %>
+  </div>
+  <% if f.object.profile_image? && f.object.errors[:profile_image].blank? %>
+    <%= image_tag f.object.profile_image.url %>
+  <% end %>
+  <%= f.hidden_field :profile_image_cache unless f.object.errors[:profile_image].any? %>
 
   <div class="actions">
     <%= f.submit %>

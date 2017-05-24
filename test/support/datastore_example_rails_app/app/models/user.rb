@@ -1,7 +1,12 @@
+require 'active_model/datastore/carrier_wave_uploader'
+
 class User
   include ActiveModel::Datastore
+  extend CarrierWaveUploader
 
-  attr_accessor :email, :enabled, :name, :role, :state
+  attr_accessor :email, :enabled, :name, :profile_image, :role, :state
+
+  mount_uploader :profile_image, ProfileImageUploader
 
   before_validation :set_default_values
   after_validation :format_values
@@ -11,7 +16,7 @@ class User
   validates :role, presence: true
 
   def entity_properties
-    %w[email enabled name role]
+    %w[email enabled name profile_image role]
   end
 
   def set_default_values
