@@ -126,8 +126,8 @@ end
 ```
 
 Callbacks work as you would expect. We have also added the ability to set default values through 
-[`default_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:default_property_value) 
-and type cast the format of values through [`format_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore:format_property_value):
+[`default_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel/Datastore/PropertyValues#default_property_value-instance_method) 
+and type cast the format of values through [`format_property_value`](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel/Datastore/PropertyValues#format_property_value-instance_method):
 
 ```ruby
 class User
