@@ -24,13 +24,10 @@ module CloudDatastore
       ENV['GCLOUD_KEYFILE_JSON'] = '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
       "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
     end
-  else
-    ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8181'
-    ENV['GCLOUD_PROJECT'] = 'test-datastore'
   end
 
   def self.dataset
-    @dataset ||= Google::Cloud.datastore(ENV['GCLOUD_PROJECT'])
+    @dataset ||= Google::Cloud.datastore
   end
 
   def self.reset_dataset
