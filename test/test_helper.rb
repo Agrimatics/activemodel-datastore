@@ -54,6 +54,10 @@ class ActiveSupport::TestCase
       system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
       sleep 3
     end
+    if defined?(Rails) != 'constant'
+      ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8181'
+      ENV['GCLOUD_PROJECT'] = 'test-datastore'
+    end
     CloudDatastore.dataset
     CarrierWave.configure do |config|
       config.reset_config
