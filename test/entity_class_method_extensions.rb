@@ -2,12 +2,12 @@
 # Additional methods added for testing only.
 #
 module EntityClassMethodExtensions
-  def all_test_entities
+  def all_test_entities(namespace: nil)
     query = CloudDatastore.dataset.query(name)
-    CloudDatastore.dataset.run(query)
+    CloudDatastore.dataset.run(query, namespace: namespace)
   end
 
-  def count_test_entities
-    all_test_entities.length
+  def count_test_entities(namespace: nil)
+    all_test_entities(namespace: namespace).length
   end
 end

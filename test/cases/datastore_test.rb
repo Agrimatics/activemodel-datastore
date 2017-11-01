@@ -401,4 +401,190 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_equal key.id_type, :name
     assert_equal parent_string_key.name, key.name
   end
+
+  test 'build entity with namespace' do
+    namespace = 'test-namespace'
+    mock_model = MockModel.new(name: 'Entity Test', namespace: namespace)
+    entity = mock_model.build_entity
+    assert_equal namespace, mock_model.namespace
+    assert_equal namespace, entity.key.namespace
+    assert_equal 'Entity Test', entity.properties['name']
+    assert_equal 'MockModel', entity.key.kind
+    assert_nil entity.key.id
+    assert_nil entity.key.name
+    assert_nil entity.key.parent
+  end
+
+  test 'save with namespace' do
+    namespace_one = 'test-namespace-one'
+    namespace_two = 'test-namespace-two'
+
+    assert_equal 0, MockModel.count_test_entities
+    assert_equal 0, MockModel.count_test_entities(namespace: namespace_one)
+    assert_equal 0, MockModel.count_test_entities(namespace: namespace_two)
+
+    mock_model = MockModel.new(name: 'Entity Test', namespace: namespace_one)
+    assert mock_model.save
+
+    assert_equal 0, MockModel.count_test_entities
+    assert_equal 1, MockModel.count_test_entities(namespace: namespace_one)
+    assert_equal 0, MockModel.count_test_entities(namespace: namespace_two)
+
+    mock_model.namespace = namespace_two
+    assert mock_model.save
+    assert_equal 0, MockModel.count_test_entities
+    assert_equal 1, MockModel.count_test_entities(namespace: namespace_one)
+    assert_equal 1, MockModel.count_test_entities(namespace: namespace_two)
+
+    mock_model.namespace = nil
+    assert mock_model.save
+    assert_equal 1, MockModel.count_test_entities
+    assert_equal 1, MockModel.count_test_entities(namespace: namespace_one)
+    assert_equal 1, MockModel.count_test_entities(namespace: namespace_two)
+  end
+
+  test 'update with namespace' do
+    namespace_one = 'test-namespace-one'
+    mock_model = create(:mock_model, name: 'Entity Test', namespace: namespace_one)
+    id = mock_model.id
+    count = MockModel.count_test_entities(namespace: namespace_one)
+    mock_model.update(name: 'different name')
+    assert_equal id, mock_model.id
+    assert_equal count, MockModel.count_test_entities(namespace: namespace_one)
+    key = CloudDatastore.dataset.key 'MockModel', mock_model.id, namespace: namespace_one
+    entity = CloudDatastore.dataset.find key
+    assert_equal id, entity.key.id
+    assert_equal 'MockModel', entity.key.kind
+    assert_nil entity.key.parent
+    assert_equal 'different name', entity['name']
+  end
+
+  test 'destroy with namespace' do
+    namespace_one = 'test-namespace-one'
+    mock_model = create(:mock_model, name: 'Entity Test', namespace: namespace_one)
+    count = MockModel.count_test_entities(namespace: namespace_one)
+    mock_model.destroy
+    assert_equal count - 1, MockModel.count_test_entities(namespace: namespace_one)
+  end
+
+  test 'find with namespace' do
+    namespace_one = 'test-namespace-one'
+    mock_model = create(:mock_model, name: 'Entity', namespace: namespace_one)
+    model_entity = MockModel.find(mock_model.id, namespace: namespace_one)
+    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert_equal 'Entity', model_entity.name
+  end
+
+  test 'find entity with namespace' do
+    namespace_one = 'test-namespace-one'
+    mock_model_1 = create(:mock_model, name: 'Entity 1', namespace: namespace_one)
+    entity = MockModel.find_entity(mock_model_1.id, nil, namespace_one)
+    assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
+    assert_equal 'Entity 1', entity.properties['name']
+    assert_equal 'Entity 1', entity['name']
+    assert_equal 'Entity 1', entity[:name]
+    parent_key = MockModel.parent_key(MOCK_PARENT_ID)
+    attr = attributes_for(
+      :mock_model,
+      name: 'Entity 2',
+      parent_key_id: MOCK_PARENT_ID,
+      namespace: namespace_one
+    )
+    mock_model_2 = MockModel.new(attr)
+    mock_model_2.save
+    entity = MockModel.find_entity(mock_model_2.id, nil, namespace_one)
+    assert_nil entity
+    entity = MockModel.find_entity(mock_model_2.id, parent_key, namespace_one)
+    assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
+    assert_equal 'Entity 2', entity.properties['name']
+    assert_nil MockModel.find_entity(mock_model_2.id + 1, nil, namespace_one)
+  end
+
+  test 'find entities with namespace' do
+    namespace_one = 'test-namespace-one'
+    mock_model_1 = create(:mock_model, name: 'Entity 1', namespace: namespace_one)
+    mock_model_2 = create(:mock_model, name: 'Entity 2', namespace: namespace_one)
+    entities = MockModel.find_entities(mock_model_1.id, mock_model_2.id, namespace: namespace_one)
+    assert_equal 2, entities.size
+    entities.each { |entity| assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect }
+    assert_equal 'Entity 1', entities[0][:name]
+    assert_equal 'Entity 2', entities[1][:name]
+    parent_key = MockModel.parent_key(MOCK_PARENT_ID, namespace: namespace_one)
+    attr = attributes_for(
+      :mock_model,
+      name: 'Entity 3',
+      parent_key_id: MOCK_PARENT_ID,
+      namespace: namespace_one
+    )
+    mock_model_3 = MockModel.new(attr)
+    mock_model_3.save
+    entities = MockModel.find_entities(
+      [
+        mock_model_1.id,
+        mock_model_2.id,
+        mock_model_3.id
+      ],
+      namespace: namespace_one
+    )
+    assert_equal 2, entities.size
+    entities = MockModel.find_entities(
+      mock_model_2.id,
+      mock_model_3.id,
+      parent: parent_key,
+      namespace: namespace_one
+    )
+    assert_equal 1, entities.size
+    assert_equal 'Entity 3', entities[0][:name]
+    assert_empty MockModel.find_entities(mock_model_3.id + 1, namespace: namespace_one)
+  end
+
+  test 'find by with namespace' do
+    namespace_one = 'test-namespace-one'
+    model_entity = MockModel.find_by(name: 'Billy Bob', namespace: namespace_one)
+    assert_nil model_entity
+    create(:mock_model, name: 'Billy Bob', namespace: namespace_one)
+    model_entity = MockModel.find_by(name: 'Billy Bob', namespace: namespace_one)
+    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert_equal 'Billy Bob', model_entity.name
+    parent_key = MockModel.parent_key(MOCK_PARENT_ID, namespace: namespace_one)
+    attr = attributes_for(
+      :mock_model,
+      name: 'Entity With Parent',
+      parent_key_id: MOCK_PARENT_ID,
+      namespace: namespace_one
+    )
+    mock_model_2 = MockModel.new(attr)
+    mock_model_2.save
+    model_entity = MockModel.find_by(name: 'Billy Bob', namespace: namespace_one)
+    assert_equal 'Billy Bob', model_entity.name
+    model_entity = MockModel.find_by(
+      name: 'Billy Bob',
+      ancestor: parent_key,
+      namespace: namespace_one
+    )
+    assert_nil model_entity
+    model_entity = MockModel.find_by(
+      name: 'Entity With Parent',
+      ancestor: parent_key,
+      namespace: namespace_one
+    )
+    assert_equal 'Entity With Parent', model_entity.name
+  end
+
+  test 'from entity with namespace' do
+    namespace_one = 'test-namespace-one'
+    entity = CloudDatastore.dataset.entity
+    key = CloudDatastore.dataset.key('MockEntity', '12345', namespace: namespace_one)
+    key.parent = CloudDatastore.dataset.key('Parent', 11111, namespace: namespace_one)
+    entity.key = key
+    entity['name'] = 'A Mock Entity'
+    entity['role'] = 1
+    assert_nil MockModel.from_entity(nil)
+    model_entity = MockModel.from_entity(entity)
+    assert model_entity.is_a?(MockModel), model_entity.inspect
+    refute model_entity.role_changed?
+    assert model_entity.entity_property_values.is_a? Hash
+    assert_equal 'A Mock Entity', model_entity.entity_property_values['name']
+    assert_equal namespace_one, model_entity.namespace
+  end
 end

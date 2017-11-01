@@ -29,6 +29,7 @@ class MockModel
   attr_accessor :name, :role, :image, :images
   validates :name, presence: true
   enable_change_tracking :name, :role
+  attr_accessor :namespace
 
   def entity_properties
     %w[name role image images]
@@ -77,13 +78,20 @@ class ActiveSupport::TestCase
   end
 
   def delete_all_test_entities!
-    entity_kinds = %w[MockModelParent MockModel]
-    entity_kinds.each do |kind|
-      query = CloudDatastore.dataset.query(kind)
-      loop do
-        entities = CloudDatastore.dataset.run(query)
-        break if entities.empty?
-        CloudDatastore.dataset.delete(*entities)
+    query = CloudDatastore.dataset.query('__namespace__').select('__key__')
+    namespaces = CloudDatastore.dataset.run(query).map do |entity|
+      entity.key.name
+    end
+
+    namespaces.each do |ns|
+      entity_kinds = %w[MockModelParent MockModel]
+      entity_kinds.each do |kind|
+        query = CloudDatastore.dataset.query(kind)
+        loop do
+          entities = CloudDatastore.dataset.run(query, namespace: ns)
+          break if entities.empty?
+          CloudDatastore.dataset.delete(*entities)
+        end
       end
     end
   end

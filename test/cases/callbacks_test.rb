@@ -5,6 +5,7 @@ class CallbacksTest < ActiveSupport::TestCase
     super
     @mock_model = MockModel.new
     @mock_model.name = 'Initial Name'
+    @mock_model.namespace = nil
   end
 
   test 'before validation callback on save' do
@@ -13,7 +14,7 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     refute @mock_model.save
     assert_nil @mock_model.name
-    assert_equal 0, MockModel.count_test_entities
+    assert_equal 0, MockModel.count_test_entities(namespace: @mock_model.namespace)
   end
 
   test 'after validation callback on save' do
@@ -22,7 +23,7 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     assert @mock_model.save
     assert_nil @mock_model.name
-    assert_equal 1, MockModel.count_test_entities
+    assert_equal 1, MockModel.count_test_entities(namespace: @mock_model.namespace)
   end
 
   test 'before save callback' do
@@ -31,7 +32,8 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     assert @mock_model.save
     assert_equal 'Name changed before save', @mock_model.name
-    assert_equal 'Name changed before save', MockModel.all.first.name
+    ns = @mock_model.namespace
+    assert_equal 'Name changed before save', MockModel.all(namespace: ns).first.name
   end
 
   test 'after save callback' do
@@ -40,7 +42,8 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     assert @mock_model.save
     assert_equal 'Name changed after save', @mock_model.name
-    assert_equal 'Initial Name', MockModel.all.first.name
+    ns = @mock_model.namespace
+    assert_equal 'Initial Name', MockModel.all(namespace: ns).first.name
   end
 
   test 'before validation callback on update' do
@@ -65,7 +68,8 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     assert @mock_model.update(name: 'This name should get changed')
     assert_equal 'Name changed before update', @mock_model.name
-    assert_equal 'Name changed before update', MockModel.all.first.name
+    ns = @mock_model.namespace
+    assert_equal 'Name changed before update', MockModel.all(namespace: ns).first.name
   end
 
   test 'after update callback' do
@@ -74,6 +78,7 @@ class CallbacksTest < ActiveSupport::TestCase
     end
     assert @mock_model.update(name: 'This name should make it into datastore')
     assert_equal 'Name changed after update', @mock_model.name
-    assert_equal 'This name should make it into datastore', MockModel.all.first.name
+    ns = @mock_model.namespace
+    assert_equal 'This name should make it into datastore', MockModel.all(namespace: ns).first.name
   end
 end
