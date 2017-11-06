@@ -3,7 +3,7 @@ require 'active_support'
 require 'active_support/testing/autorun'
 require 'entity_class_method_extensions'
 require 'minitest/reporters'
-require 'factory_girl'
+require 'factory_bot'
 require 'faker'
 
 require 'google/cloud/datastore'
@@ -19,7 +19,7 @@ require 'active_model/datastore'
 require 'action_controller/metal/strong_parameters'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
-FactoryGirl.find_definitions
+FactoryBot.find_definitions
 
 MOCK_PARENT_ID = 1010101010101010
 
@@ -45,7 +45,7 @@ MockModel.send :extend, EntityClassMethodExtensions
 MockModelParent.send :extend, EntityClassMethodExtensions
 
 class ActiveSupport::TestCase
-  include FactoryGirl::Syntax::Methods
+  include FactoryBot::Syntax::Methods
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?

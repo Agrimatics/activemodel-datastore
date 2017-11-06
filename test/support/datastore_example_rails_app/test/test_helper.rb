@@ -5,7 +5,6 @@ require 'rails/test_help'
 require 'minitest/reporters'
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
-FactoryGirl.find_definitions
 
 MOCK_ACCOUNT_ID = 1010101010101010
 
@@ -32,7 +31,7 @@ MockModelParent.send :extend, EntityClassMethodExtensions
 User.send :extend, EntityClassMethodExtensions
 
 class ActiveSupport::TestCase
-  include FactoryGirl::Syntax::Methods
+  include FactoryBot::Syntax::Methods
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?

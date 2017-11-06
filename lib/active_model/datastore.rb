@@ -168,7 +168,7 @@ module ActiveModel::Datastore
   end
 
   ##
-  # For compatibility with libraries that require the bang method version (example, factory_girl).
+  # For compatibility with libraries that require the bang method version (example, factory_bot).
   #
   def save!
     save_entity || raise(EntityNotSavedError, 'Failed to save the entity')

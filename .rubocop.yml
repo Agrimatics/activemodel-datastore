@@ -65,5 +65,5 @@ Documentation:
 RedundantReturn:
   AllowMultipleReturnValues: true
 
-Style/VariableNumber:
+Naming/VariableNumber:
   Enabled: false
