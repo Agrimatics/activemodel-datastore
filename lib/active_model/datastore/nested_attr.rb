@@ -159,7 +159,7 @@ module ActiveModel::Datastore
       association_name = association_name.to_sym
       send("#{association_name}=", []) if send(association_name).nil?
 
-      attributes.each do |_i, params|
+      attributes.each_value do |params|
         if params['id'].blank?
           unless reject_new_record?(params, options)
             new = association_name.to_c.new(params.except(*UNASSIGNABLE_KEYS))

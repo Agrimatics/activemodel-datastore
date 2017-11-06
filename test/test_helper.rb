@@ -12,6 +12,7 @@ require 'carrierwave'
 require 'active_model/datastore/carrier_wave_uploader'
 require 'active_model/datastore/connection'
 require 'active_model/datastore/errors'
+require 'active_model/datastore/excluded_indexes'
 require 'active_model/datastore/nested_attr'
 require 'active_model/datastore/property_values'
 require 'active_model/datastore/track_changes'
@@ -72,6 +73,7 @@ class ActiveSupport::TestCase
     delete_all_test_entities!
     FileUtils.rm_rf(CarrierWave::Uploader::Base.root)
     CarrierWave.configure(&:reset_config)
+    MockModel.clear_index_exclusions!
   end
 
   def delete_all_test_entities!

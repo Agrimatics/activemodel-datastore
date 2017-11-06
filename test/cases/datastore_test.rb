@@ -75,6 +75,18 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_equal MOCK_PARENT_ID, entity.key.parent.id
   end
 
+  test 'build entity with index exclusion' do
+    MockModel.no_indexes :name
+    name = Faker::Lorem.characters(1600)
+    mock_model = MockModel.new(name: name)
+    mock_model.save
+    entity = mock_model.build_entity
+    assert_equal name, entity.properties['name']
+    assert entity.exclude_from_indexes? 'name'
+    assert entity.exclude_from_indexes? :name
+    refute entity.exclude_from_indexes? :role
+  end
+
   test 'save' do
     count = MockModel.count_test_entities
     mock_model = MockModel.new

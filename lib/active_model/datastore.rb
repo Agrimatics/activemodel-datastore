@@ -114,6 +114,7 @@ module ActiveModel::Datastore
   include ActiveModel::Dirty
   include ActiveModel::Validations
   include ActiveModel::Validations::Callbacks
+  include ActiveModel::Datastore::ExcludedIndexes
   include ActiveModel::Datastore::NestedAttr
   include ActiveModel::Datastore::PropertyValues
   include ActiveModel::Datastore::TrackChanges
@@ -159,6 +160,7 @@ module ActiveModel::Datastore
     end
     entity_properties.each do |attr|
       entity[attr] = instance_variable_get("@#{attr}")
+      entity.exclude_from_indexes!(attr, true) if no_index_attributes.include? attr
     end
     entity
   end
@@ -370,12 +372,6 @@ module ActiveModel::Datastore
       model_entity
     end
 
-    def exclude_from_index(entity, boolean)
-      entity.properties.to_h.keys.each do |value|
-        entity.exclude_from_indexes! value, boolean
-      end
-    end
-
     ##
     # Constructs a Google::Cloud::Datastore::Query.
     #
@@ -402,7 +398,7 @@ module ActiveModel::Datastore
       sleep_time = 0.25
       begin
         yield
-      rescue => e
+      rescue Google::Cloud::Error => e
         return false if retries >= max_retry_count
         puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
         # 0.25, 0.5, 1, 2, and 4 second between retries.
@@ -418,7 +414,7 @@ module ActiveModel::Datastore
       sleep_time = 0.25
       begin
         yield
-      rescue => e
+      rescue Google::Cloud::Error => e
         raise e if retries >= max_retry_count
         puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
         # 0.25, 0.5, 1, 2, and 4 second between retries.

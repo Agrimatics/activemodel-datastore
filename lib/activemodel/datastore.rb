@@ -7,6 +7,7 @@ require 'active_model'
 
 require 'active_model/datastore/connection'
 require 'active_model/datastore/errors'
+require 'active_model/datastore/excluded_indexes'
 require 'active_model/datastore/nested_attr'
 require 'active_model/datastore/property_values'
 require 'active_model/datastore/track_changes'
