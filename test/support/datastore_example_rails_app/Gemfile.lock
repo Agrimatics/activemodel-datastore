@@ -1,7 +1,7 @@
 PATH
   remote: /Users/bmclean/workspace/activemodel-datastore
   specs:
-    activemodel-datastore (0.2.4)
+    activemodel-datastore (0.2.5)
       activemodel (~> 5.0)
       activesupport (~> 5.0)
       google-cloud-datastore (~> 1.0)

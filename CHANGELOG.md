@@ -1,3 +1,8 @@
+### 0.2.5 / 2017-11-06
+* adding support for setting indexed false on individual entity properties
+* updating example Cloud Datastore Rails app to 5.1.4
+* retry on exceptions are now specific to Google::Cloud::Error
+
 ### 0.2.4 / 2017-10-31
 * non-Rails projects now source client authentication settings automatically (rjmooney)
 * documentation improvements
