@@ -73,9 +73,7 @@ module ActiveModel::Datastore
       changed = marked_for_destruction? ? true : false
       tracked_attributes.each do |attr|
         break if changed
-        if send("#{attr}_changed?")
-          changed = send(attr) == send("#{attr}_was") ? false : true
-        end
+        changed = send(attr) != send("#{attr}_was") if send("#{attr}_changed?")
       end
       self.exclude_from_save = !changed
       changed

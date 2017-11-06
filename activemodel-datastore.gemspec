@@ -25,7 +25,7 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'actionpack', '~> 5.0'
-  gem.add_development_dependency 'factory_girl', '~> 4.8'
+  gem.add_development_dependency 'factory_bot', '~> 4.8'
   gem.add_development_dependency 'faker', '~> 1.7', '>= 1.7.3'
   gem.add_development_dependency 'minitest', '~> 5.10'
   gem.add_development_dependency 'minitest-reporters', '~> 1.1', '>= 1.1.14'
