@@ -13,6 +13,7 @@ automatically scales to handle your applications' load. Cloud Datastore is a sch
 suited for unstructured or semi-structured application data.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
+[![Build Status](https://travis-ci.org/Agrimatics/activemodel-datastore.svg?branch=master)](https://travis-ci.org/Agrimatics/activemodel-datastore)
  
 ## Table of contents
  
