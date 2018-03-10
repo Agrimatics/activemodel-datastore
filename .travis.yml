@@ -1,6 +1,6 @@
 language: ruby
 cache:
-  - bundler
+  bundler: true
   directories:
     - "$HOME/google-cloud-sdk/"
 script:
