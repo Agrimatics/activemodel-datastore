@@ -11,6 +11,7 @@ AllCops:
     - "test/support/datastore_example_rails_app/config/initializers/session_store.rb"
     - "test/support/datastore_example_rails_app/vendor/**/*"
     - "test/support/datastore_example_rails_app/Gemfile"
+    - "vendor/**/*"
 
 Style/FrozenStringLiteralComment:
   Enabled: false
