@@ -20,6 +20,10 @@ before_install:
   # Await emulator listening on port 8180 before continuing:
   - while [ ! nc -vzw1 localhost 8180 2> /dev/null ]; do echo -n .; sleep 0.1; done
 
+script:
+  - bundle exec rake
+  - bundle exec rubocop
+
 matrix:
   allow_failures:
   - rvm: ruby-head
