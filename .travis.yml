@@ -24,9 +24,8 @@ before_install:
   - cloud_datastore_emulator start --port=8180 tmp/local_datastore > /tmp/cloud_datastore_emulator.log &
 
 install:
-  - bundle config
   - bundle install --jobs=3 --retry=3
-  - (cd test/support/datastore_example_rails_app/ && bundle install --jobs=3 --retry=3)
+  - (cd test/support/datastore_example_rails_app/ && BUNDLE_GEMFILE=./Gemfile bundle install --jobs=3 --retry=3)
 
 before_script:
   # Await emulator listening on port 8180 before continuing:
@@ -34,7 +33,7 @@ before_script:
 
 script:
   - bundle exec rake
-  - (gem env ; cd test/support/datastore_example_rails_app/ ; gem env ; bundle exec rake)
+  - (cd test/support/datastore_example_rails_app/ ; BUNDLE_GEMFILE=./Gemfile bundle exec rake)
   - bundle exec rubocop
 
 matrix:
