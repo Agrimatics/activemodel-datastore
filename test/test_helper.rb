@@ -19,7 +19,12 @@ require 'active_model/datastore/track_changes'
 require 'active_model/datastore'
 require 'action_controller/metal/strong_parameters'
 
-Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+if ENV['CI']
+  Minitest::Reporters.use! Minitest::Reporters::DefaultReporter.new
+else
+  Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+end
+
 FactoryBot.find_definitions
 
 MOCK_PARENT_ID = 1010101010101010
