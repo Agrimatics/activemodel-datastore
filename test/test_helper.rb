@@ -19,7 +19,12 @@ require 'active_model/datastore/track_changes'
 require 'active_model/datastore'
 require 'action_controller/metal/strong_parameters'
 
-Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+if ENV['CI']
+  Minitest::Reporters.use! Minitest::Reporters::DefaultReporter.new
+else
+  Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
+end
+
 FactoryBot.find_definitions
 
 MOCK_PARENT_ID = 1010101010101010
@@ -50,7 +55,7 @@ class ActiveSupport::TestCase
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?
-      data_dir = File.join(File.expand_path('../..', __FILE__), 'tmp', 'test_datastore')
+      data_dir = File.join(File.expand_path('..', __dir__), 'tmp', 'test_datastore')
       # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
       system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
       sleep 3

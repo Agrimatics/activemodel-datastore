@@ -3,6 +3,10 @@ rvm:
   - 2.4.3
   - 2.5
   - ruby-head
+
+sudo: false
+dist: trusty
+
 cache:
   bundler: true
   directories:
@@ -19,6 +23,10 @@ before_install:
   - cloud_datastore_emulator start --port=8180 tmp/local_datastore > /tmp/cloud_datastore_emulator.log &
   # Await emulator listening on port 8180 before continuing:
   - while [ ! nc -vzw1 localhost 8180 2> /dev/null ]; do echo -n .; sleep 0.1; done
+
+script:
+  - bundle exec rake
+  - bundle exec rubocop
 
 matrix:
   allow_failures:

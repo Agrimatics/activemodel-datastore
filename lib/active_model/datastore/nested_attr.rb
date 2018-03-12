@@ -105,9 +105,7 @@ module ActiveModel::Datastore
 
     def nested_model_class_names
       entity_kinds = []
-      if nested_attributes?
-        nested_models.each { |x| entity_kinds << x.class.name }
-      end
+      nested_models.each { |x| entity_kinds << x.class.name } if nested_attributes?
       entity_kinds.uniq
     end
 
