@@ -3,10 +3,15 @@ rvm:
   - 2.4.3
   - 2.5
   - ruby-head
+
+sudo: false
+dist: trusty
+
 cache:
   bundler: true
   directories:
     - "$HOME/google-cloud-sdk/"
+
 before_install:
   - gcloud version || true
   - if [ ! -d "$HOME/google-cloud-sdk/bin" ]; then rm -rf $HOME/google-cloud-sdk; export CLOUDSDK_CORE_DISABLE_PROMPTS=1; curl https://sdk.cloud.google.com | bash; fi
@@ -15,10 +20,15 @@ before_install:
   - gcloud version
   - gcloud components install cloud-datastore-emulator
   - export PATH="$HOME/google-cloud-sdk/platform/cloud-datastore-emulator:$PATH"
-  - cloud_datastore_emulator create tmp/local_datastore
-  - cloud_datastore_emulator start --port=8180 tmp/local_datastore > /tmp/cloud_datastore_emulator.log &
-  # Await emulator listening on port 8180 before continuing:
-  - while [ ! nc -vzw1 localhost 8180 2> /dev/null ]; do echo -n .; sleep 0.1; done
+
+install:
+  - bundle install --jobs=3 --retry=3
+  - (cd test/support/datastore_example_rails_app/ && BUNDLE_GEMFILE=./Gemfile bundle install --jobs=3 --retry=3)
+
+script:
+  - bundle exec rake
+  - (cd test/support/datastore_example_rails_app/ ; BUNDLE_GEMFILE=./Gemfile bundle exec rake)
+  - bundle exec rubocop
 
 matrix:
   allow_failures:
