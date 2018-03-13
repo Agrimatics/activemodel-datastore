@@ -2,7 +2,6 @@ require 'bundler/setup'
 require 'active_support'
 require 'active_support/testing/autorun'
 require 'entity_class_method_extensions'
-require 'minitest/reporters'
 require 'factory_bot'
 require 'faker'
 
@@ -18,12 +17,6 @@ require 'active_model/datastore/property_values'
 require 'active_model/datastore/track_changes'
 require 'active_model/datastore'
 require 'action_controller/metal/strong_parameters'
-
-if ENV['CI']
-  Minitest::Reporters.use! Minitest::Reporters::DefaultReporter.new
-else
-  Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
-end
 
 FactoryBot.find_definitions
 
@@ -55,16 +48,27 @@ class ActiveSupport::TestCase
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?
+      puts 'Starting the cloud datastore emulator in test mode.'
       data_dir = File.join(File.expand_path('..', __dir__), 'tmp', 'test_datastore')
-      # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
-      system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
-      sleep 3
+      spawn "cloud_datastore_emulator start --port=8181 --testing #{data_dir} > /dev/null 2>&1"
+      loop do
+        begin
+          Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
+          break
+        rescue Errno::ECONNREFUSED
+          sleep 0.2
+        end
+      end
     end
     if defined?(Rails) != 'constant'
       ENV['DATASTORE_EMULATOR_HOST'] = 'localhost:8181'
       ENV['GCLOUD_PROJECT'] = 'test-datastore'
     end
     CloudDatastore.dataset
+    carrierwave_init
+  end
+
+  def carrierwave_init
     CarrierWave.configure do |config|
       config.reset_config
       config.storage = :file

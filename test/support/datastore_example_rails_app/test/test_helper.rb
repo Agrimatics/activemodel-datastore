@@ -2,9 +2,6 @@ ENV['RAILS_ENV'] ||= 'test'
 require File.expand_path('../config/environment', __dir__)
 require 'entity_class_method_extensions'
 require 'rails/test_help'
-require 'minitest/reporters'
-
-Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
 MOCK_ACCOUNT_ID = 1010101010101010
 
@@ -35,10 +32,17 @@ class ActiveSupport::TestCase
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?
+      puts 'Starting the cloud datastore emulator in test mode.'
       data_dir = Rails.root.join('tmp', 'test_datastore')
-      # Start the test Cloud Datastore Emulator in 'testing' mode (data is stored in memory only).
-      system("cloud_datastore_emulator start --port=8181 --testing #{data_dir} &")
-      sleep 3
+      spawn "cloud_datastore_emulator start --port=8181 --testing #{data_dir} > /dev/null 2>&1"
+      loop do
+        begin
+          Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
+          break
+        rescue Errno::ECONNREFUSED
+          sleep 0.2
+        end
+      end
     end
     CloudDatastore.dataset
   end
@@ -57,5 +61,10 @@ class ActiveSupport::TestCase
         CloudDatastore.dataset.delete(*entities)
       end
     end
+  end
+
+  Minitest.after_run do
+    puts "\nShutting down the cloud datastore emulator."
+    system 'kill -9 $(lsof -ti tcp:8181)'
   end
 end
