@@ -62,9 +62,4 @@ class ActiveSupport::TestCase
       end
     end
   end
-
-  Minitest.after_run do
-    puts "\nShutting down the cloud datastore emulator."
-    system 'kill -9 $(lsof -ti tcp:8181)'
-  end
 end

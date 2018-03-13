@@ -25,9 +25,6 @@ Style/EmptyMethod:
 Style/SymbolArray:
   EnforcedStyle: brackets
 
-Style/VariableNumber:
-  Enabled: false
-
 Style/WordArray:
   EnforcedStyle: percent
 
@@ -68,3 +65,6 @@ Documentation:
 
 RedundantReturn:
   AllowMultipleReturnValues: true
+
+Naming/VariableNumber:
+  Enabled: false
