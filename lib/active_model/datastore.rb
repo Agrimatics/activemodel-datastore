@@ -439,7 +439,7 @@ module ActiveModel::Datastore
       query.cursor(options[:cursor]) if options[:cursor]
       query.limit(options[:limit]) if options[:limit]
       query_sort(query, options)
-      query.select(options[:select]) if options[:select]
+      query.select(*options[:select]) if options[:select]
       query_property_filter(query, options)
     end
 
