@@ -242,7 +242,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
   test 'find entity' do
     mock_model_1 = create(:mock_model, name: 'Entity 1')
     entity = MockModel.find_entity(mock_model_1.id)
-    assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
+    assert entity.is_a?(Google::Cloud::Datastore::Entity)
     assert_equal 'Entity 1', entity.properties['name']
     assert_equal 'Entity 1', entity['name']
     assert_equal 'Entity 1', entity[:name]
@@ -253,7 +253,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     entity = MockModel.find_entity(mock_model_2.id)
     assert_nil entity
     entity = MockModel.find_entity(mock_model_2.id, parent_key)
-    assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect
+    assert entity.is_a?(Google::Cloud::Datastore::Entity)
     assert_equal 'Entity 2', entity.properties['name']
     assert_nil MockModel.find_entity(mock_model_2.id + 1)
   end
@@ -263,7 +263,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     mock_model_2 = create(:mock_model, name: 'Entity 2')
     entities = MockModel.find_entities(mock_model_1.id, mock_model_2.id)
     assert_equal 2, entities.size
-    entities.each { |entity| assert entity.is_a?(Google::Cloud::Datastore::Entity), entity.inspect }
+    entities.each { |entity| assert entity.is_a?(Google::Cloud::Datastore::Entity) }
     assert_equal 'Entity 1', entities[0][:name]
     assert_equal 'Entity 2', entities[1][:name]
     parent_key = MockModel.parent_key(MOCK_PARENT_ID)
@@ -293,7 +293,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
   test 'find' do
     mock_model = create(:mock_model, name: 'Entity')
     model_entity = MockModel.find(mock_model.id)
-    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert model_entity.is_a?(MockModel)
     assert_equal 'Entity', model_entity.name
   end
 
@@ -303,7 +303,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     mock_model = MockModel.new(attr)
     mock_model.save
     model_entity = MockModel.find(mock_model.id, parent: parent_key)
-    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert model_entity.is_a?(MockModel)
     assert_equal 'Entity With Parent', model_entity.name
   end
 
@@ -316,7 +316,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     mock_model_2 = MockModel.new(attr)
     mock_model_2.save
     model_entities = MockModel.find(mock_model_1.id, mock_model_2.id, parent: parent_key)
-    model_entities.each { |model| assert model.is_a?(MockModel), model.inspect }
+    model_entities.each { |model| assert model.is_a?(MockModel) }
     assert_equal 'Entity 1 With Parent', model_entities[0].name
     assert_equal 'Entity 2 With Parent', model_entities[1].name
   end
@@ -336,7 +336,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_nil model_entity
     create(:mock_model, name: 'Billy Bob')
     model_entity = MockModel.find_by(name: 'Billy Bob')
-    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert model_entity.is_a?(MockModel)
     assert_equal 'Billy Bob', model_entity.name
     parent_key = MockModel.parent_key(MOCK_PARENT_ID)
     attr = attributes_for(:mock_model, name: 'Entity With Parent', parent_key_id: MOCK_PARENT_ID)
@@ -359,7 +359,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     entity['role'] = 1
     assert_nil MockModel.from_entity(nil)
     model_entity = MockModel.from_entity(entity)
-    assert model_entity.is_a?(MockModel), model_entity.inspect
+    assert model_entity.is_a?(MockModel)
     refute model_entity.role_changed?
     assert model_entity.entity_property_values.is_a? Hash
     assert_equal model_entity.entity_property_values['name'], 'A Mock Entity'
@@ -382,6 +382,9 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     grpc = MockModel.build_query(select: 'name').to_grpc
     refute_nil grpc.projection
     assert_equal 1, grpc.projection.count
+    grpc = MockModel.build_query(select: %w[name role]).to_grpc
+    refute_nil grpc.projection
+    assert_equal 2, grpc.projection.count
     grpc = MockModel.build_query(cursor: 'a_cursor').to_grpc
     refute_nil grpc.start_cursor
     parent_int_key = CloudDatastore.dataset.key('Parent', MOCK_PARENT_ID)
