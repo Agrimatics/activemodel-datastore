@@ -14,6 +14,13 @@ Gem::Specification.new do |gem|
   gem.homepage      = 'https://github.com/Agrimatics/activemodel-datastore'
   gem.license       = 'MIT'
 
+  gem.metadata      = {
+    "homepage_uri" => "https://github.com/Agrimatics/activemodel-datastore",
+    "changelog_uri" => "https://github.com/Agrimatics/activemodel-datastore/blob/master/CHANGELOG.md",
+    "source_code_uri" => "https://github.com/Agrimatics/activemodel-datastore/",
+    "bug_tracker_uri" => "https://github.com/Agrimatics/activemodel-datastore/issues"
+  }
+
   gem.required_ruby_version = '>= 2.2.2'
 
   gem.files         = Dir['CHANGELOG.md', 'README.md', 'LICENSE.txt', 'lib/**/*']
