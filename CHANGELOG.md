@@ -1,3 +1,8 @@
+### 0.3.0 / 2018-04-17
+* adding Travis CI configuration (rud)
+* no longer override connection related environment variables if already defined(shao1555)
+* adding support for passing query an array of select properties
+
 ### 0.2.5 / 2017-11-06
 * adding support for setting indexed false on individual entity properties
 * updating example Cloud Datastore Rails app to 5.1.4
