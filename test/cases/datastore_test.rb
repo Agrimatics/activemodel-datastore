@@ -403,7 +403,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_equal parent_string_key.kind, key.kind
     assert_equal key.id_type, :name
     assert_equal parent_string_key.name, key.name
-    grpc = MockModel.build_query(sort: {name: :asc, timestamp: :desc}).to_grpc
+    grpc = MockModel.build_query(sort: { name: :asc, timestamp: :desc }).to_grpc
     assert_equal grpc.order.count, 2
     assert_equal grpc.order[0].property.name, 'name'
     assert_equal grpc.order[0].direction, :ASCENDING
