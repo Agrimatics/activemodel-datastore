@@ -2,8 +2,8 @@
 # Batch operations
 #
 #
-# Such batch calls are faster than making separate calls for each individual entity because they incur the overhead
-# for only one service call.
+# Such batch calls are faster than making separate calls for each individual entity because they
+# incur the overhead for only one service call.
 #
 # reference: https://cloud.google.com/datastore/docs/concepts/entities#batch_operations
 #
@@ -13,10 +13,9 @@
 #
 module ActiveModel::Datastore
   def self.save_all(entries, parent: nil)
-    invalid_entries = entries.reject{|entry| entry.valid?}
-    return if invalid_entries.present?
+    return if entries.reject(&:valid?).present?
     results = []
-    entries.each_slice(500) do |sliced_entries|
+    entries.each_slice(500).map do |sliced_entries|
       entities_to_save = []
       saved_entities = nil
       fn = lambda do |n|
@@ -28,16 +27,20 @@ module ActiveModel::Datastore
             fn.call(n + 1)
           else
             # batch insert
-            saved_entities = entry.class.retry_on_exception? { CloudDatastore.dataset.save entities_to_save }
+            saved_entities = entry.class.retry_on_exception? do
+              CloudDatastore.dataset.save entities_to_save
+            end
           end
-          sliced_entries[n].id = saved_entities[n].key.id if saved_entities
-          sliced_entries[n].parent_key_id = saved_entities[n].key.parent.id if saved_entities && saved_entities[n].key.parent.present?
-          results << sliced_entries if n == 0 && saved_entities
+          if saved_entities.present?
+            sliced_entries[n].fill_id_from_entity(saved_entities[n])
+            results << sliced_entries if n.zero?
+          end
           saved_entities.present?
         end
       end
       fn.call(0)
-    end
+      sliced_entries
+    end.flatten
     results.flatten
   end
 end
