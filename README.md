@@ -245,6 +245,8 @@ users = User.all(ancestor: parent_key, where: ['name', '=', 'Bryce'])
 
 users = User.all(where: [['name', '=', 'Ian'], ['enabled', '=', true]])
 
+users = User.all(sort: {name: :asc, created_at: :desc})
+
 users, cursor = User.all(limit: 7)
 
 # @param [Hash] options The options to construct the query with.
@@ -252,8 +254,13 @@ users, cursor = User.all(limit: 7)
 # @option options [Google::Cloud::Datastore::Key] :ancestor Filter for inherited results.
 # @option options [String] :cursor Sets the cursor to start the results at.
 # @option options [Integer] :limit Sets a limit to the number of results to be returned.
-# @option options [String] :order Sort the results by property name.
-# @option options [String] :desc_order Sort the results by descending property name.
+# @option options [Array, Hash] :sort Sort the results in one of these formats
+#   [:name, :asc]
+#   [ [:name, :asc], [:created_at, :desc] ]
+#   { name: :asc, created_at: :desc }
+#   { name: 1, created_at: -1 }
+# @option options [String] :order Sort the results by property name. (deprecated)
+# @option options [String] :desc_order Sort the results by descending property name. (deprecated)
 # @option options [Array] :select Retrieve only select properties from the matched entities.
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```

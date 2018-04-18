@@ -381,7 +381,13 @@ module ActiveModel::Datastore
     # @option options [String] :cursor Sets the cursor to start the results at.
     # @option options [Integer] :limit Sets a limit to the number of results to be returned.
     # @option options [String] :order Sort the results by property name.
-    # @option options [String] :desc_order Sort the results by descending property name.
+    # @option options [Array, Hash] :sort Sort the results in one of these formats
+    #   [:name, :asc]
+    #   [ [:name, :asc], [:created_at, :desc] ]
+    #   { name: :asc, created_at: :desc }
+    #   { name: 1, created_at: -1 }
+    # @option options [String] :order Sort the results by property name. (deprecated)
+    # @option options [String] :desc_order Sort the results by descending property name. (deprecated)
     # @option options [Array] :select Retrieve only select properties from the matched entities.
     # @option options [Array] :where Adds a property filter of arrays in the format
     #   [name, operator, value].
@@ -449,7 +455,16 @@ module ActiveModel::Datastore
     def query_sort(query, options)
       query.order(options[:order]) if options[:order]
       query.order(options[:desc_order], :desc) if options[:desc_order]
-      query
+      if options[:sort].is_a?(Array)
+        options[:sort] = [options[:sort]] unless options[:sort].first.is_a?(Array)
+        options[:sort].each do |condition|
+          query.order(condition[0].to_s, [:desc, 'desc', -1].include?(condition[1]) ? :desc : :asc)
+        end
+      elsif options[:sort].is_a?(Hash)
+        options[:sort].each_pair do |field, way|
+          query.order(field.to_s, [:desc, 'desc', -1].include?(way) ? :desc : :asc)
+        end
+      end
     end
 
     ##

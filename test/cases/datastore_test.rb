@@ -403,5 +403,21 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_equal parent_string_key.kind, key.kind
     assert_equal key.id_type, :name
     assert_equal parent_string_key.name, key.name
+    grpc = MockModel.build_query(sort: {name: :asc, timestamp: :desc}).to_grpc
+    assert_equal grpc.order.count, 2
+    assert_equal grpc.order[0].property.name, 'name'
+    assert_equal grpc.order[0].direction, :ASCENDING
+    assert_equal grpc.order[1].property.name, 'timestamp'
+    assert_equal grpc.order[1].direction, :DESCENDING
+    grpc = MockModel.build_query(sort: [:timestamp, -1]).to_grpc
+    assert_equal grpc.order.count, 1
+    assert_equal grpc.order.first.property.name, 'timestamp'
+    assert_equal grpc.order.first.direction, :DESCENDING
+    grpc = MockModel.build_query(sort: [[:name, 1], [:timestamp, -1]]).to_grpc
+    assert_equal grpc.order.count, 2
+    assert_equal grpc.order[0].property.name, 'name'
+    assert_equal grpc.order[0].direction, :ASCENDING
+    assert_equal grpc.order[1].property.name, 'timestamp'
+    assert_equal grpc.order[1].direction, :DESCENDING
   end
 end
