@@ -9,7 +9,7 @@
 #
 # group = Group.find(params[:group_id])
 # users = %w{ alice bob charlie }.map{ |name| User.new(name: name) }
-# saved_users = ActiveModel::CloudDatastore.save_all(users, parent: group)
+# saved_users = ActiveModel::Datastore.save_all(users, parent: group)
 #
 module ActiveModel::Datastore
   def self.save_all(entries, parent: nil)
