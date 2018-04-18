@@ -194,6 +194,7 @@ module ActiveModel::Datastore
   end
 
   def fill_id_from_entity(entity)
+    return if entity.nil?
     self.id = entity.key.id
     self.parent_key_id = entity.key.parent.id if entity.key.parent.present?
     entity
