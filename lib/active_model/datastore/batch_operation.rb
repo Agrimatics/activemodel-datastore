@@ -28,7 +28,7 @@ module ActiveModel::Datastore
             # batch insert
             results = entry.class.retry_on_exception? { CloudDatastore.dataset.save entities }
           end
-          sliced_entries[n].fill_id_from_entity(results[n]) if results.present?
+          sliced_entries[n].fill_id_from_entity(results&.fetch(n))
           results.present?
         end
       end
