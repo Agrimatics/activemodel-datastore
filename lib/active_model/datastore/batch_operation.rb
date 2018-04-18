@@ -14,25 +14,33 @@
 module ActiveModel::Datastore
   def self.save_all(entries, parent: nil)
     return if entries.reject(&:valid?).present?
+    results = []
     entries.each_slice(500).map do |sliced_entries|
-      entities = []
+      entities_to_save = []
+      saved_entities = nil
       fn = lambda do |n|
         entry = sliced_entries[n]
         entry.run_callbacks(:save) do
-          entities << entry.build_entity(parent)
+          entities_to_save << entry.build_entity(parent)
           if n + 1 < sliced_entries.count
             # recursive call
             fn.call(n + 1)
           else
             # batch insert
-            results = entry.class.retry_on_exception? { CloudDatastore.dataset.save entities }
+            saved_entities = entry.class.retry_on_exception? do
+              CloudDatastore.dataset.save entities_to_save
+            end
           end
-          sliced_entries[n].fill_id_from_entity(results&.fetch(n))
-          results.present?
+          if saved_entities.present?
+            sliced_entries[n].fill_id_from_entity(saved_entities[n])
+            results << sliced_entries if n.zero?
+          end
+          saved_entities.present?
         end
       end
       fn.call(0)
       sliced_entries
     end.flatten
+    results.flatten
   end
 end
