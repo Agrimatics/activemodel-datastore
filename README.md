@@ -255,6 +255,7 @@ users, cursor = User.all(limit: 7)
 # @option options [String] :order Sort the results by property name.
 # @option options [String] :desc_order Sort the results by descending property name.
 # @option options [Array] :select Retrieve only select properties from the matched entities.
+# @option options [Array] :distinct_on Group results by a list of properties.
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```
 

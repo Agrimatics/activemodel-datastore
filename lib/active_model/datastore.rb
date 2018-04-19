@@ -273,6 +273,7 @@ module ActiveModel::Datastore
     # @option options [String] :order Sort the results by property name.
     # @option options [String] :desc_order Sort the results by descending property name.
     # @option options [Array] :select Retrieve only select properties from the matched entities.
+    # @option options [Array] :distinct_on Group results by a list of properties.
     # @option options [Array] :where Adds a property filter of arrays in the format
     #   [name, operator, value].
     #
@@ -383,6 +384,7 @@ module ActiveModel::Datastore
     # @option options [String] :order Sort the results by property name.
     # @option options [String] :desc_order Sort the results by descending property name.
     # @option options [Array] :select Retrieve only select properties from the matched entities.
+    # @option options [Array] :distinct_on Group results by a list of properties.
     # @option options [Array] :where Adds a property filter of arrays in the format
     #   [name, operator, value].
     #
@@ -440,6 +442,7 @@ module ActiveModel::Datastore
       query.limit(options[:limit]) if options[:limit]
       query_sort(query, options)
       query.select(*options[:select]) if options[:select]
+      query.distinct_on(*options[:distinct_on]) if options[:distinct_on]
       query_property_filter(query, options)
     end
 

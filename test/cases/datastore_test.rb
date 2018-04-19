@@ -385,6 +385,14 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     grpc = MockModel.build_query(select: %w[name role]).to_grpc
     refute_nil grpc.projection
     assert_equal 2, grpc.projection.count
+    grpc = MockModel.build_query(distinct_on: 'name').to_grpc
+    refute_nil grpc.distinct_on
+    assert_equal 1, grpc.distinct_on.count
+    assert_equal 'name', grpc.distinct_on.first.name
+    grpc = MockModel.build_query(distinct_on: %w[name role]).to_grpc
+    refute_nil grpc.distinct_on
+    assert_equal 2, grpc.distinct_on.count
+    assert_equal 'role', grpc.distinct_on.last.name
     grpc = MockModel.build_query(cursor: 'a_cursor').to_grpc
     refute_nil grpc.start_cursor
     parent_int_key = CloudDatastore.dataset.key('Parent', MOCK_PARENT_ID)
