@@ -38,6 +38,7 @@ module ActiveModel::Datastore
     #
     def format_property_value(attr, type)
       return unless send(attr.to_sym).present?
+
       case type.to_sym
       when :integer
         send("#{attr.to_sym}=", send(attr.to_sym).to_i)
