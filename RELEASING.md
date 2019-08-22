@@ -22,6 +22,3 @@ with `rails test`.
 
 9. Run the `rake release` command. This will package the gem, a tag for the version of the release 
 in Github and push to Rubygems.
-
-
-

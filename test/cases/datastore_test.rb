@@ -77,7 +77,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
 
   test 'build entity with index exclusion' do
     MockModel.no_indexes :name
-    name = Faker::Lorem.characters(1600)
+    name = Faker::Lorem.characters(number: 1600)
     mock_model = MockModel.new(name: name)
     mock_model.save
     entity = mock_model.build_entity
