@@ -1,3 +1,6 @@
+### 0.3.0 / 2019-08-23
+* adding support for Rails 6
+
 ### 0.3.0 / 2018-04-17
 * adding Travis CI configuration (rud)
 * no longer override connection related environment variables if already defined(shao1555)
