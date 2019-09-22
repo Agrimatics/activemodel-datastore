@@ -215,7 +215,7 @@ module ActiveModel::Datastore
     # A default parent key for specifying an ancestor path and creating an entity group.
     #
     def parent_key(parent_id)
-      CloudDatastore.dataset.key('Parent' + name, parent_id.to_i)
+      CloudDatastore.dataset.key('Parent' + name, parent_id)
     end
 
     ##
@@ -310,7 +310,7 @@ module ActiveModel::Datastore
     #
     def find(*ids, parent: nil)
       expects_array = ids.first.is_a?(Array)
-      ids = ids.flatten.compact.uniq.map(&:to_i)
+      ids = ids.flatten.compact.uniq
 
       case ids.size
       when 0
