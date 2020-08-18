@@ -6,14 +6,14 @@
 # lock the GIL. Most Rails applications heavily use IO, so adding additional
 # threads will allow Puma to process multiple threads.
 #
-threads_count = ENV.fetch('RAILS_MAX_THREADS') { 5 }.to_i
+threads_count = ENV.fetch('RAILS_MAX_THREADS', 5)
 threads threads_count, threads_count
 
 rackup      DefaultRackup
-port        ENV.fetch('PORT') { 3000 }
-environment ENV.fetch('RAILS_ENV') { 'development' }
+port        ENV.fetch('PORT', 3000)
+environment ENV.fetch('RAILS_ENV', 'development')
 
-if ENV.fetch('WEB_CONCURRENCY') { 0 }.to_i > 1
+if ENV.fetch('WEB_CONCURRENCY', 0).to_i > 1
   # Puma can fork multiple OS processes within each instance to allow Rails
   # to support multiple concurrent requests (Cluster Mode). In Puma terminology
   # these are referred to as worker processes. Worker processes are isolated from

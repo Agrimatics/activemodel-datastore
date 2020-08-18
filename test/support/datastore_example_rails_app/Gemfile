@@ -17,19 +17,19 @@ gem 'coffee-rails', '~> 4.2'
 gem 'jquery-rails'
 gem 'turbolinks', '~> 5'
 
-gem 'puma', '~> 3.9'
+gem 'puma', '~> 4.0'
 gem 'rack-timeout'
 
 gem 'activemodel-datastore', path: File.expand_path('../../../..', __FILE__)
 
 # Image storage
-gem 'carrierwave', '~> 1.0'
+gem 'carrierwave', '~> 2.1'
 gem 'mini_magick', '~> 4.7'
 gem 'fog-google', '~> 1.6'
 
 group :development, :test do
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
-  gem 'capybara', '~> 2.13'
+  gem 'capybara', '>= 2.15'
   gem 'selenium-webdriver'
 end
 

@@ -36,12 +36,10 @@ class ActiveSupport::TestCase
       data_dir = Rails.root.join('tmp', 'test_datastore')
       spawn "cloud_datastore_emulator start --port=8181 --testing #{data_dir} > /dev/null 2>&1"
       loop do
-        begin
-          Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
-          break
-        rescue Errno::ECONNREFUSED
-          sleep 0.2
-        end
+        Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
+        break
+      rescue Errno::ECONNREFUSED
+        sleep 0.2
       end
     end
     CloudDatastore.dataset
