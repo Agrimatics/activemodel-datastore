@@ -180,6 +180,7 @@ module ActiveModel::Datastore
       unless attributes.is_a?(Hash)
         raise ArgumentError, "Hash expected, got #{attributes.class.name} (#{attributes.inspect})"
       end
+
       attributes
     end
 
@@ -214,6 +215,7 @@ module ActiveModel::Datastore
     #
     def call_reject_if(attributes, options)
       return false if destroy_flag?(attributes)
+
       attributes = attributes.with_indifferent_access
       blank_proc = proc { |attrs| attrs.all? { |_key, value| value.blank? } }
       options[:reject_if] = blank_proc if options[:reject_if] == :all_blank
@@ -245,6 +247,7 @@ module ActiveModel::Datastore
     class AssociatedValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
         return unless Array(value).reject(&:valid?).any?
+
         record.errors.add(attribute, :invalid, options.merge(value: value))
       end
     end

@@ -16,6 +16,7 @@ class ProfileImageUploader < CarrierWave::Uploader::Base
   # Override as we don't want the files deleted from Cloud Storage.
   def remove!
     return unless model.respond_to?(:keep_file) && model.keep_file
+
     super
   end
 

@@ -1,7 +1,7 @@
 Active Model Datastore
 ===================================
 
-Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5 applications. 
+Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5+ applications. 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
@@ -267,6 +267,7 @@ users, cursor = User.all(limit: 7)
 # @option options [String] :order Sort the results by property name.
 # @option options [String] :desc_order Sort the results by descending property name.
 # @option options [Array] :select Retrieve only select properties from the matched entities.
+# @option options [Array] :distinct_on Group results by a list of properties.
 # @option options [Array] :where Adds a property filter of arrays in the format[name, operator, value].
 ```
 

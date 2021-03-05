@@ -32,10 +32,10 @@ elsif Rails.env.production?
   CarrierWave.configure do |config|
     config.fog_provider = 'fog/google'
     config.fog_credentials = {
-      provider:                'Google',
-      google_project:          ENV['GCLOUD_PROJECT'],
-      google_client_email:     ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'],
-      google_json_key_string:  '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
+      provider: 'Google',
+      google_project: ENV['GCLOUD_PROJECT'],
+      google_client_email: ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'],
+      google_json_key_string: '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
         "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
     }
     config.fog_directory  = ENV['CLOUD_STORAGE_BUCKET_NAME']

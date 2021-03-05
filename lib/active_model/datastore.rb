@@ -154,6 +154,7 @@ module ActiveModel::Datastore
     entity = CloudDatastore.dataset.entity self.class.name, id
     if parent.present?
       raise ArgumentError, 'Must be a Key' unless parent.is_a? Google::Cloud::Datastore::Key
+
       entity.key.parent = parent
     elsif parent?
       entity.key.parent = self.class.parent_key(parent_key_id)
@@ -179,6 +180,7 @@ module ActiveModel::Datastore
   def update(params)
     assign_attributes(params)
     return unless valid?
+
     run_callbacks :update do
       entity = build_entity
       self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
@@ -203,6 +205,7 @@ module ActiveModel::Datastore
 
   def save_entity(parent = nil)
     return unless valid?
+
     run_callbacks :save do
       entity = build_entity(parent)
       success = self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
@@ -277,6 +280,7 @@ module ActiveModel::Datastore
     # @option options [String] :order Sort the results by property name.
     # @option options [String] :desc_order Sort the results by descending property name.
     # @option options [Array] :select Retrieve only select properties from the matched entities.
+    # @option options [Array] :distinct_on Group results by a list of properties.
     # @option options [Array] :where Adds a property filter of arrays in the format
     #   [name, operator, value].
     #
@@ -356,6 +360,7 @@ module ActiveModel::Datastore
     #
     def from_entities(entities)
       raise ArgumentError, 'Entities param must be an Enumerator' unless entities.is_a? Enumerator
+
       entities.map { |entity| from_entity(entity) }
     end
 
@@ -367,6 +372,7 @@ module ActiveModel::Datastore
     #
     def from_entity(entity)
       return if entity.nil?
+
       model_entity = build_model(entity)
       model_entity.entity_property_values = entity.properties.to_h
       entity.properties.to_h.each do |name, value|
@@ -387,6 +393,7 @@ module ActiveModel::Datastore
     # @option options [String] :order Sort the results by property name.
     # @option options [String] :desc_order Sort the results by descending property name.
     # @option options [Array] :select Retrieve only select properties from the matched entities.
+    # @option options [Array] :distinct_on Group results by a list of properties.
     # @option options [Array] :where Adds a property filter of arrays in the format
     #   [name, operator, value].
     #
@@ -404,6 +411,7 @@ module ActiveModel::Datastore
         yield
       rescue Google::Cloud::Error => e
         return false if retries >= max_retry_count
+
         puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
@@ -420,6 +428,7 @@ module ActiveModel::Datastore
         yield
       rescue Google::Cloud::Error => e
         raise e if retries >= max_retry_count
+
         puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
@@ -444,6 +453,7 @@ module ActiveModel::Datastore
       query.limit(options[:limit]) if options[:limit]
       query_sort(query, options)
       query.select(*options[:select]) if options[:select]
+      query.distinct_on(*options[:distinct_on]) if options[:distinct_on]
       query_property_filter(query, options)
     end
 

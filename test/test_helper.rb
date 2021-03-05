@@ -53,12 +53,10 @@ class ActiveSupport::TestCase
       data_dir = File.join(File.expand_path('..', __dir__), 'tmp', 'test_datastore')
       spawn "cloud_datastore_emulator start --port=8181 --testing #{data_dir} > /dev/null 2>&1"
       loop do
-        begin
-          Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
-          break
-        rescue Errno::ECONNREFUSED
-          sleep 0.2
-        end
+        Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
+        break
+      rescue Errno::ECONNREFUSED
+        sleep 0.2
       end
     end
     if defined?(Rails) != 'constant'
@@ -93,6 +91,7 @@ class ActiveSupport::TestCase
       loop do
         entities = CloudDatastore.dataset.run(query)
         break if entities.empty?
+
         CloudDatastore.dataset.delete(*entities)
       end
     end

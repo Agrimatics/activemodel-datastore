@@ -70,9 +70,11 @@ module ActiveModel::Datastore
       unless tracked_attributes.present?
         raise TrackChangesError, 'Object has not been configured for change tracking.'
       end
+
       changed = marked_for_destruction? ? true : false
       tracked_attributes.each do |attr|
         break if changed
+
         changed = send(attr) != send("#{attr}_was") if send("#{attr}_changed?")
       end
       self.exclude_from_save = !changed
@@ -81,6 +83,7 @@ module ActiveModel::Datastore
 
     def remove_unmodified_children
       return unless tracked_attributes.present? && nested_attributes?
+
       nested_attributes.each do |attr|
         with_changes = Array(send(attr.to_sym)).select(&:values_changed?)
         send("#{attr}=", with_changes)

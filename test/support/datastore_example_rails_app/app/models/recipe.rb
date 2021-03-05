@@ -34,6 +34,7 @@ class Recipe
 
   def build_ingredients
     return unless ingredients.nil? || ingredients.empty?
+
     self.ingredients = [Ingredient.new(order: 1)]
   end
 
