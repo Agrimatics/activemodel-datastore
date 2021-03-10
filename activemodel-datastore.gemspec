@@ -28,8 +28,7 @@ Gem::Specification.new do |gem|
 
   gem.add_runtime_dependency 'activemodel', '>= 5.0.0'
   gem.add_runtime_dependency 'activesupport', '>= 5.0.0'
-  gem.add_runtime_dependency 'google-cloud-datastore', '~> 2.0'
-
+  gem.add_runtime_dependency 'google-cloud-datastore', '~> 2.1'
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'actionpack', '>= 5.0.0'
   gem.add_development_dependency 'factory_bot', '~> 6.1'
