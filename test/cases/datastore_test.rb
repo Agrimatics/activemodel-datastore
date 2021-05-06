@@ -367,7 +367,7 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
 
   test 'build query' do
     query = MockModel.build_query(kind: 'MockModel')
-    assert query.class == Google::Cloud::Datastore::Query
+    assert query.instance_of?(Google::Cloud::Datastore::Query)
     grpc = query.to_grpc
     assert_equal 'MockModel', grpc.kind[0].name
     assert_nil grpc.filter

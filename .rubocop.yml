@@ -1,4 +1,9 @@
 AllCops:
+  NewCops: enable
+  DisplayCopNames: true
+  DisplayStyleGuide: true
+  ExtraDetails: false
+  SuggestExtensions: false
   TargetRubyVersion: 2.6
   Exclude:
     - "activemodel-datastore.gemspec"
@@ -26,97 +31,27 @@ Layout/EmptyLinesAroundAttributeAccessor:
 
 ##################### Lint ###########################
 
-Lint/BinaryOperatorWithIdenticalOperands:
-  Enabled: true
-
-Lint/DeprecatedOpenSSLConstant:
-  Enabled: true
-
-Lint/DuplicateElsifCondition:
-  Enabled: true
-
-Lint/DuplicateRescueException:
-  Enabled: true
-
-Lint/EmptyConditionalBody:
-  Enabled: true
-
-Lint/FloatComparison:
-  Enabled: true
-
-Lint/MixedRegexpCaptureTypes:
-  Enabled: true
-
-Lint/MissingSuper:
-  Enabled: true
-
-Lint/OutOfRangeRegexpRef:
-  Enabled: true
-
-Lint/RaiseException:
-  Enabled: true
-
-Lint/SelfAssignment:
-  Enabled: true
-
 Lint/SendWithMixinArgument:
   Enabled: false
 
-Lint/StructNewOverride:
-  Enabled: true
-
-Lint/TopLevelReturnWithArgument:
-  Enabled: true
-
-Lint/UnreachableLoop:
-  Enabled: true
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - "test/cases/datastore_test.rb"
+    - "test/cases/track_changes_test.rb"
 
 #################### Style ###########################
 
 Style/AccessorGrouping:
   Enabled: false
 
-Style/ArrayCoercion:
-  Enabled: true
-
-Style/BisectedAttrAccessor:
-  Enabled: true
-
-Style/CaseLikeIf:
-  Enabled: true
-
 Style/Documentation:
   Enabled: false
-
-Style/ExplicitBlockArgument:
-  Enabled: false
-
-Style/ExponentialNotation:
-  Enabled: true
 
 Style/FrozenStringLiteralComment:
   Enabled: false
 
-Style/GlobalStdStream:
-  Enabled: true
-
-Style/HashAsLastArrayItem:
-  Enabled: true
-
-Style/HashEachMethods:
-  Enabled: true
-
-Style/HashLikeCase:
-  Enabled: true
-
-Style/HashTransformKeys:
-  Enabled: true
-
-Style/HashTransformValues:
-  Enabled: true
-
 Style/ClassAndModuleChildren:
-  EnforcedStyle: compact
+  Enabled: false
 
 Style/EmptyMethod:
   EnforcedStyle: expanded
@@ -124,44 +59,20 @@ Style/EmptyMethod:
 Style/NumericLiterals:
   Enabled: false
 
-Style/OptionalBooleanParameter:
-  Enabled: true
-
-Style/RedundantAssignment:
-  Enabled: true
-
-Style/RedundantFetchBlock:
-  Enabled: true
-
-Style/RedundantFileExtensionInRequire:
-  Enabled: true
-
-Style/RedundantReturn:
-  AllowMultipleReturnValues: true
-
-Style/RedundantRegexpCharacterClass:
-  Enabled: true
-
-Style/RedundantRegexpEscape:
-  Enabled: true
-
-Style/SingleArgumentDig:
-  Enabled: true
-
-Style/SlicingWithRange:
-  Enabled: true
-
 Style/StringConcatenation:
   Enabled: false
 
 Style/SymbolArray:
   EnforcedStyle: brackets
 
-Style/WordArray:
-  EnforcedStyle: percent
-
-Style/YodaCondition:
+Style/IfWithBooleanLiteralBranches:
   Enabled: false
+
+Style/DocumentDynamicEvalDefinition:
+  Exclude:
+    - "lib/active_model/datastore/carrier_wave_uploader.rb"
+
+#################### Metrics #########################
 
 Metrics/ModuleLength:
   CountComments: false
@@ -185,6 +96,8 @@ Metrics/BlockLength:
 
 Metrics/AbcSize:
   Max: 26
+
+#################### Naming ##########################
 
 Naming/VariableNumber:
   Enabled: false
