@@ -1,3 +1,6 @@
+### 0.6.0 / 2021-09-20
+* defaulting the Google::Cloud.datastore network timeout to 15 sec and providing the env var DATASTORE_NETWORK_TIMEOUT as an override.
+
 ### 0.5.0 / 2020-08-17
 * adding support Google::Cloud::Datastore 2.0.0 (rewritten low-level client, with improved performance and stability).
 
