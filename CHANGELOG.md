@@ -1,3 +1,6 @@
+### 0.7.0 / 2021-11-04
+* adding support for Ruby 3
+
 ### 0.6.0 / 2021-09-20
 * defaulting the Google::Cloud.datastore network timeout to 15 sec and providing the env var DATASTORE_NETWORK_TIMEOUT as an override.
 
