@@ -248,7 +248,7 @@ module ActiveModel::Datastore
       def validate_each(record, attribute, value)
         return unless Array(value).reject(&:valid?).any?
 
-        record.errors.add(attribute, :invalid, options.merge(value: value))
+        record.errors.add(attribute, :invalid, **options.merge(value: value))
       end
     end
   end
