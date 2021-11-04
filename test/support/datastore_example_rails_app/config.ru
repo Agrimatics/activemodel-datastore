@@ -2,6 +2,5 @@
 
 require_relative 'config/environment'
 
-use Rack::Static, urls: %w[/carrierwave-cache /uploads], root: 'tmp'
-
 run Rails.application
+Rails.application.load_server

@@ -13,6 +13,7 @@ AllCops:
     - "test/support/datastore_example_rails_app/config/environments/**/*"
     - "test/support/datastore_example_rails_app/config/application.rb"
     - "test/support/datastore_example_rails_app/config/initializers/backtrace_silencers.rb"
+    - "test/support/datastore_example_rails_app/config/initializers/content_security_policy.rb"
     - "test/support/datastore_example_rails_app/config/initializers/session_store.rb"
     - "test/support/datastore_example_rails_app/vendor/**/*"
     - "test/support/datastore_example_rails_app/Gemfile"
