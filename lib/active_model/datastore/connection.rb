@@ -21,8 +21,12 @@ module CloudDatastore
       ENV['GCLOUD_PROJECT'] ||= 'test-datastore'
     elsif ENV['SERVICE_ACCOUNT_PRIVATE_KEY'].present? &&
           ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'].present?
-      ENV['GCLOUD_KEYFILE_JSON'] ||= '{"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",
-      "client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '"}'
+      ENV['GCLOUD_KEYFILE_JSON'] ||=
+        '{' \
+        '"private_key": "' + ENV['SERVICE_ACCOUNT_PRIVATE_KEY'] + '",' \
+        '"client_email": "' + ENV['SERVICE_ACCOUNT_CLIENT_EMAIL'] + '",' \
+        '"type": "service_account"' \
+        '}'
     end
   end
 

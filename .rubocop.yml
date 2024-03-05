@@ -30,6 +30,9 @@ Layout/SpaceAroundMethodCallOperator:
 Layout/EmptyLinesAroundAttributeAccessor:
   Enabled: false
 
+Layout/LineEndStringConcatenationIndentation:
+  Enabled: false
+
 ##################### Lint ###########################
 
 Lint/SendWithMixinArgument:
@@ -73,6 +76,9 @@ Style/DocumentDynamicEvalDefinition:
   Exclude:
     - "lib/active_model/datastore/carrier_wave_uploader.rb"
 
+Style/FetchEnvVar:
+  Enabled: false
+
 #################### Metrics #########################
 
 Metrics/ModuleLength:
@@ -88,6 +94,8 @@ Metrics/ClassLength:
 Metrics/MethodLength:
   CountComments: false
   Max: 20
+  Exclude:
+    - 'lib/active_model/datastore/carrier_wave_uploader.rb'
 
 Metrics/BlockLength:
   Exclude:

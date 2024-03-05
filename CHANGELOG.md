@@ -1,3 +1,6 @@
+### 0.8.0 / 2024-03-05
+* updating GCLOUD_KEYFILE_JSON to work with the latest version of GoogleAuth
+
 ### 0.7.0 / 2021-11-04
 * adding support for Ruby 3
 

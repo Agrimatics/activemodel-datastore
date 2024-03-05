@@ -88,7 +88,7 @@ module ActiveModel::Datastore
         with_changes = Array(send(attr.to_sym)).select(&:values_changed?)
         send("#{attr}=", with_changes)
       end
-      nested_attributes.delete_if { |attr| Array(send(attr.to_sym)).size.zero? }
+      nested_attributes.delete_if { |attr| Array(send(attr.to_sym)).empty? }
     end
 
     module ClassMethods
