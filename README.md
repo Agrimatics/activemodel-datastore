@@ -161,6 +161,18 @@ class User
 end
 ```
 
+To improve performance, you can save many entities at once. (Batch operation)
+
+```ruby
+group = Group.find(params[:group_id])
+users = %w{ alice bob charlie }.map{ |name| User.new(name: name) }
+if ActiveModel::Datastore.save_all(users, parent: group)
+  format.html { redirect_to action: :index, notice: "#{users.count} users were successfully created.' }
+else
+  format.html { render :new }
+end
+```
+
 ## <a name="controller"></a>Controller Example
 
 Now on to the controller! A scaffold generated controller works out of the box:

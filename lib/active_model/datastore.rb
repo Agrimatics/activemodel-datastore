@@ -195,6 +195,12 @@ module ActiveModel::Datastore
     end
   end
 
+  def fill_id_from_entity(entity)
+    self.id = entity.key.id
+    self.parent_key_id = entity.key.parent.id if entity.key.parent.present?
+    entity
+  end
+
   private
 
   def save_entity(parent = nil)
@@ -203,9 +209,7 @@ module ActiveModel::Datastore
     run_callbacks :save do
       entity = build_entity(parent)
       success = self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
-      self.id = entity.key.id if success
-      self.parent_key_id = entity.key.parent.id if entity.key.parent.present?
-      success
+      success ? fill_id_from_entity(entity) : false
     end
   end
 
