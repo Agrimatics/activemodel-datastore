@@ -72,6 +72,11 @@ Style/SymbolArray:
 Style/IfWithBooleanLiteralBranches:
   Enabled: false
 
+Style/OneClassPerFile:
+  Exclude:
+    - "lib/active_model/datastore/nested_attr.rb"
+    - "test/**/*"
+
 Style/DocumentDynamicEvalDefinition:
   Exclude:
     - "lib/active_model/datastore/carrier_wave_uploader.rb"
