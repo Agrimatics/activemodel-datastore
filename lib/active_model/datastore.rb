@@ -119,6 +119,14 @@ module ActiveModel::Datastore
   include ActiveModel::Datastore::PropertyValues
   include ActiveModel::Datastore::TrackChanges
 
+  def self.logger
+    @logger || (Rails.logger if defined?(Rails) == 'constant')
+  end
+
+  def self.logger=(logger)
+    @logger = logger
+  end
+
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
     define_model_callbacks :save, :update, :destroy
@@ -183,7 +191,7 @@ module ActiveModel::Datastore
 
     run_callbacks :update do
       entity = build_entity
-      self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
+      self.class.retry_on_exception?(operation: 'save') { CloudDatastore.dataset.save entity }
     end
   end
 
@@ -191,7 +199,7 @@ module ActiveModel::Datastore
     run_callbacks :destroy do
       key = CloudDatastore.dataset.key self.class.name, id
       key.parent = self.class.parent_key(parent_key_id) if parent?
-      self.class.retry_on_exception? { CloudDatastore.dataset.delete key }
+      self.class.retry_on_exception?(operation: 'delete') { CloudDatastore.dataset.delete key }
     end
   end
 
@@ -202,7 +210,9 @@ module ActiveModel::Datastore
 
     run_callbacks :save do
       entity = build_entity(parent)
-      success = self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
+      success = self.class.retry_on_exception?(operation: 'save') do
+        CloudDatastore.dataset.save entity
+      end
       self.id = entity.key.id if success
       self.parent_key_id = entity.key.parent.id if entity.key.parent.present?
       success
@@ -229,7 +239,7 @@ module ActiveModel::Datastore
     def find_entity(id_or_name, parent = nil)
       key = CloudDatastore.dataset.key name, id_or_name
       key.parent = parent if parent.present?
-      retry_on_exception { CloudDatastore.dataset.find key }
+      retry_on_exception(operation: 'find') { CloudDatastore.dataset.find key }
     end
 
     ##
@@ -290,7 +300,9 @@ module ActiveModel::Datastore
     def all(options = {})
       next_cursor = nil
       query = build_query(options)
-      query_results = retry_on_exception { CloudDatastore.dataset.run query }
+      query_results = retry_on_exception(operation: 'run query') do
+        CloudDatastore.dataset.run query
+      end
       if options[:limit]
         next_cursor = query_results.cursor if query_results.size == options[:limit]
         return from_entities(query_results.all), next_cursor
@@ -342,7 +354,9 @@ module ActiveModel::Datastore
       query.ancestor(args[:ancestor]) if args[:ancestor]
       query.limit(1)
       query.where(args.keys[0].to_s, '=', args.values[0])
-      query_results = retry_on_exception { CloudDatastore.dataset.run query }
+      query_results = retry_on_exception(operation: 'run query') do
+        CloudDatastore.dataset.run query
+      end
       from_entity(query_results.first)
     end
 
@@ -400,15 +414,19 @@ module ActiveModel::Datastore
       query_options(query, options)
     end
 
-    def retry_on_exception?(max_retry_count = 5)
+    def retry_on_exception?(max_retry_count = 5, operation: 'unknown', kind: name)
       retries = 0
       sleep_time = 0.25
       begin
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         yield
       rescue Google::Cloud::Error => e
         return false if retries >= max_retry_count
 
-        puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+        message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
+                  "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
         retries += 1
@@ -417,15 +435,19 @@ module ActiveModel::Datastore
       end
     end
 
-    def retry_on_exception(max_retry_count = 5)
+    def retry_on_exception(max_retry_count = 5, operation: 'unknown', kind: name)
       retries = 0
       sleep_time = 0.25
       begin
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         yield
       rescue Google::Cloud::Error => e
         raise e if retries >= max_retry_count
 
-        puts "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+        message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
+                  "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
         retries += 1
@@ -491,7 +513,7 @@ module ActiveModel::Datastore
     def find_all_entities(ids_or_names, parent)
       keys = ids_or_names.map { |id| CloudDatastore.dataset.key name, id }
       keys.map { |key| key.parent = parent } if parent.present?
-      retry_on_exception { CloudDatastore.dataset.find_all keys }
+      retry_on_exception(operation: 'find all') { CloudDatastore.dataset.find_all keys }
     end
 
     def build_model(entity)

@@ -78,6 +78,8 @@ module ActiveModel::Datastore
     extend ActiveSupport::Concern
     include ActiveModel::Model
 
+    UNASSIGNABLE_KEYS = %w[id _destroy].freeze
+
     included do
       attr_accessor :nested_attributes, :marked_for_destruction, :_destroy
     end
@@ -173,8 +175,6 @@ module ActiveModel::Datastore
 
     private
 
-    UNASSIGNABLE_KEYS = %w[id _destroy].freeze
-
     def validate_attributes(attributes)
       attributes = attributes.to_h if attributes.respond_to?(:permitted?)
       unless attributes.is_a?(Hash)
@@ -248,7 +248,7 @@ module ActiveModel::Datastore
       def validate_each(record, attribute, value)
         return unless Array(value).reject(&:valid?).any?
 
-        record.errors.add(attribute, :invalid, **options.merge(value: value))
+        record.errors.add(attribute, :invalid, **options, value: value)
       end
     end
   end

@@ -44,7 +44,9 @@ module CarrierWaveUploader
           self.class.uploaders.keys.each do |attr_name|
             entity[attr_name] = append_files(entity[attr_name], existing_files[attr_name])
           end
-          self.class.retry_on_exception? { CloudDatastore.dataset.save entity }
+          self.class.retry_on_exception?(operation: 'save') do
+            CloudDatastore.dataset.save entity
+          end
         end
       end
 

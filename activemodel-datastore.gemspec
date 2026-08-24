@@ -16,7 +16,7 @@ Gem::Specification.new do |gem|
 
   gem.metadata      = {
     "homepage_uri" => "https://github.com/Agrimatics/activemodel-datastore",
-    "changelog_uri" => "https://github.com/Agrimatics/activemodel-datastore/blob/master/CHANGELOG.md",
+    "changelog_uri" => "https://github.com/Agrimatics/activemodel-datastore/blob/main/CHANGELOG.md",
     "source_code_uri" => "https://github.com/Agrimatics/activemodel-datastore/",
     "bug_tracker_uri" => "https://github.com/Agrimatics/activemodel-datastore/issues"
   }
@@ -36,5 +36,5 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'faker', '~> 2.1', '>= 2.1.2'
   gem.add_development_dependency 'minitest', '~> 5.10'
   gem.add_development_dependency 'rubocop', '~> 1.14'
-  gem.add_development_dependency 'carrierwave', '~> 2.1'
+  gem.add_development_dependency 'carrierwave', '~> 3.1'
 end

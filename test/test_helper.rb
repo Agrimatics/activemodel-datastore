@@ -24,6 +24,7 @@ MOCK_PARENT_ID = 1010101010101010
 
 class MockModel
   include ActiveModel::Datastore
+
   attr_accessor :name, :role, :image, :images
   validates :name, presence: true
   enable_change_tracking :name, :role
@@ -35,6 +36,7 @@ end
 
 class MockModelParent
   include ActiveModel::Datastore::NestedAttr
+
   attr_accessor :name
   attr_accessor :mock_models
 end
