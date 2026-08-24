@@ -254,7 +254,6 @@ module ActiveModel::Datastore
   end
 end
 
-# rubocop:disable-next Style/OneClassPerFile
 class Symbol
   def to_c
     to_s.singularize.camelize.constantize
