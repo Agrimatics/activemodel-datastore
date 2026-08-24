@@ -16,7 +16,7 @@ Gem::Specification.new do |gem|
 
   gem.metadata      = {
     "homepage_uri" => "https://github.com/Agrimatics/activemodel-datastore",
-    "changelog_uri" => "https://github.com/Agrimatics/activemodel-datastore/blob/master/CHANGELOG.md",
+    "changelog_uri" => "https://github.com/Agrimatics/activemodel-datastore/blob/main/CHANGELOG.md",
     "source_code_uri" => "https://github.com/Agrimatics/activemodel-datastore/",
     "bug_tracker_uri" => "https://github.com/Agrimatics/activemodel-datastore/issues"
   }
