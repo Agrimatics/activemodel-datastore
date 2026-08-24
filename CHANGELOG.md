@@ -2,6 +2,7 @@
 * identify the Datastore operation, entity kind, and failed-attempt elapsed time in retry logs
 * use a configurable retry logger that defaults to Rails.logger and falls back to standard output
 * update the development environment to Ruby 3.4.10 and the example application to Rails 8.1
+* test CarrierWave integration against CarrierWave 3.1
 
 ### 0.8.0 / 2024-03-05
 * updating GCLOUD_KEYFILE_JSON to work with the latest version of GoogleAuth

@@ -22,7 +22,7 @@ gem 'rack-timeout'
 gem 'activemodel-datastore', path: File.expand_path('../../../..', __FILE__)
 
 # Image storage
-gem 'carrierwave', '~> 2.1'
+gem 'carrierwave', '~> 3.1'
 gem 'mini_magick', '~> 4.7'
 gem 'fog-google', '~> 1.11'
 

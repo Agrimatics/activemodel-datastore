@@ -36,5 +36,5 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency 'faker', '~> 2.1', '>= 2.1.2'
   gem.add_development_dependency 'minitest', '~> 5.10'
   gem.add_development_dependency 'rubocop', '~> 1.14'
-  gem.add_development_dependency 'carrierwave', '~> 2.1'
+  gem.add_development_dependency 'carrierwave', '~> 3.1'
 end
