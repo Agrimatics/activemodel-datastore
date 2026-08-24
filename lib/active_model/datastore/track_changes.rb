@@ -71,7 +71,7 @@ module ActiveModel::Datastore
         raise TrackChangesError, 'Object has not been configured for change tracking.'
       end
 
-      changed = marked_for_destruction? ? true : false
+      changed = marked_for_destruction? || false
       tracked_attributes.each do |attr|
         break if changed
 

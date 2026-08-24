@@ -13,7 +13,6 @@ automatically scales to handle your applications' load. Cloud Datastore is a sch
 suited for unstructured or semi-structured application data.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
-[![Build Status](https://travis-ci.org/Agrimatics/activemodel-datastore.svg?branch=master)](https://travis-ci.org/Agrimatics/activemodel-datastore)
  
 ## Table of contents
  
@@ -77,6 +76,17 @@ On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
 
 Active Model Datastore will then handle the authentication for you, and the datastore instance can 
 be accessed with `CloudDatastore.dataset`.
+
+Datastore retries use `Rails.logger` automatically when Rails is available, which preserves tagged
+logging such as request IDs. Other applications fall back to standard output. To use another logger,
+configure it during application initialization:
+
+```ruby
+ActiveModel::Datastore.logger = MyApplication.logger
+```
+
+Retry messages identify the Datastore operation, entity kind, failed-attempt elapsed time, exception,
+and retry delay.
 
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
  
@@ -463,7 +473,7 @@ To start the local Cloud Datastore emulator:
     
 ## <a name="rails"></a>Example Rails App
 
-There is an example Rails 5 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/master/test/support/datastore_example_rails_app).
+There is an example Rails 8.1 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/main/test/support/datastore_example_rails_app).
 
  ```bash
  $ bundle
