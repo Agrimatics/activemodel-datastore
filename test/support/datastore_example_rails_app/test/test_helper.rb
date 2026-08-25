@@ -34,11 +34,14 @@ class ActiveSupport::TestCase
 
   def setup
     if `lsof -t -i TCP:8181`.to_i.zero?
-      puts 'Starting the cloud datastore emulator in test mode.'
-      data_dir = Rails.root.join('tmp', 'test_datastore')
-      spawn "cloud_datastore_emulator start --port=8181 --testing #{data_dir} > /dev/null 2>&1"
+      puts 'Starting the Firestore Emulator [Datastore Mode].'
+      spawn(
+        'cloud_firestore_emulator start --database-mode=datastore-mode --port=8181',
+        out: File::NULL,
+        err: File::NULL
+      )
       loop do
-        Net::HTTP.get('localhost', '/', '8181').include? 'Ok'
+        Net::HTTP.get('localhost', '/', 8181).include? 'Ok'
         break
       rescue Errno::ECONNREFUSED
         sleep 0.2

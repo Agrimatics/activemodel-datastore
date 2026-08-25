@@ -20,7 +20,9 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_difference('User.count_test_entities') do
       post users_url, params: { user: { name: 'User 2', email: 'user_2@test.com' } }
     end
-    assert_redirected_to user_url(@user.id + 1)
+    parent_key = User.parent_key(@user.parent_key_id)
+    created_user = User.find_by(email: 'user_2@test.com', ancestor: parent_key)
+    assert_redirected_to user_url(created_user)
   end
 
   test 'should show user' do
