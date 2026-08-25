@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Java for the Firestore emulator
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up the Google Cloud SDK
+        # Ignore the "no authentication found" warning, the emulator does not connect to Datastore.
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          install_components: cloud-firestore-emulator
+
+      - name: Add the Firestore emulator to the PATH
+        run: echo "$(gcloud info --format='value(installation.sdk_root)')/platform/cloud-firestore-emulator" >> "$GITHUB_PATH"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Run the gem test suite
+        run: bundle exec rake
+
+      - name: RuboCop
+        run: bundle exec rubocop
+
+      - name: Set up the example Rails app
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: test/support/datastore_example_rails_app
+
+      - name: Run the example Rails app test suite
+        working-directory: test/support/datastore_example_rails_app
+        run: bundle exec rails test
