@@ -1,5 +1,5 @@
 PATH
-  remote: /Users/bryce/workspace/activemodel-datastore
+  remote: ../../..
   specs:
     activemodel-datastore (0.9.0)
       activemodel (>= 5.0.0)

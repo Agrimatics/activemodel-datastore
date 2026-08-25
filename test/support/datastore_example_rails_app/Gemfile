@@ -19,7 +19,7 @@ gem 'turbolinks', '~> 5'
 gem 'puma', '>= 6'
 gem 'rack-timeout'
 
-gem 'activemodel-datastore', path: File.expand_path('../../../..', __FILE__)
+gem 'activemodel-datastore', path: '../../..'
 
 # Image storage
 gem 'carrierwave', '~> 3.1'

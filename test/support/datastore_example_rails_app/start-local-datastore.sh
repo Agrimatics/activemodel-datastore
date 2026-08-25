@@ -1,2 +1,2 @@
 #!/bin/bash
-cloud_datastore_emulator start --port=8180 tmp/local_datastore
+cloud_firestore_emulator start --database-mode=datastore-mode --port=8180

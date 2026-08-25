@@ -6,7 +6,7 @@ gem compliant with [active_model](https://github.com/rails/rails/tree/master/act
 conventions and compatible with your Rails 5+ applications.
 
 Why would you want to use Google's NoSQL
-[Firestore in Datastore mode](https://cloud.google.com/datastore) with Rails?
+[Firestore in Datastore mode](https://docs.cloud.google.com/datastore/docs) with Rails?
 
 Use it when you want a Rails app backed by a fully managed, massively scalable NoSQL database,
 without provisioning database servers or manually sharding data. Datastore stores records as
@@ -15,6 +15,7 @@ automatically handles scaling and replication, provides highly available and dur
 supports indexed queries and ACID transactions.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
+[![CI](https://github.com/Agrimatics/activemodel-datastore/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Agrimatics/activemodel-datastore/actions/workflows/ci.yml)
  
 ## Table of contents
  
@@ -71,8 +72,8 @@ file. Active Model Datastore also supports the following environment variables f
 the JSON must be stored directly in environment variables:
 
 ```bash
-SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
-SERVICE_ACCOUNT_CLIENT_EMAIL = web-app@app-name.iam.gserviceaccount.com
+export SERVICE_ACCOUNT_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n'
+export SERVICE_ACCOUNT_CLIENT_EMAIL='web-app@app-name.iam.gserviceaccount.com'
 ```
 
 On Heroku the environment variables can be set under **Settings > Config Vars**.
@@ -87,9 +88,6 @@ configure it during application initialization:
 ```ruby
 ActiveModel::Datastore.logger = MyApplication.logger
 ```
-
-Retry messages identify the Datastore operation, entity kind, failed-attempt elapsed time, exception,
-and retry delay.
 
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
@@ -406,8 +404,7 @@ There are two types of indexes, *built-in* and *composite*.
 
 #### Built-in
 By default, Datastore automatically predefines an index for each property of each entity kind.
-These single property indexes are suitable for simple types of queries. These indexes are free and
-do not count against your index limit.
+These single property indexes are suitable for simple types of queries.
 
 #### Composite
 Composite indexes include multiple property values per indexed entity. Composite indexes support
@@ -450,11 +447,6 @@ cloud_firestore_emulator start --database-mode=datastore-mode --port=8180
 
 Set `DATASTORE_EMULATOR_HOST=localhost:8180` so the Ruby client connects to the emulator. The gem sets
 this automatically for Rails development and uses port 8181 for Rails tests.
-
-By default, the emulator does not enforce composite indexes. To validate an index configuration, add
-`--require-indexes --index-file=./index.yaml` when starting it. See Google's
-[Firestore in Datastore mode emulator documentation](https://cloud.google.com/datastore/docs/emulator)
-for more information.
 
 ## <a name="rails"></a>Example Rails App
 
