@@ -15,6 +15,7 @@ automatically handles scaling and replication, provides highly available and dur
 supports indexed queries and ACID transactions.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
+[![CI](https://github.com/Agrimatics/activemodel-datastore/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Agrimatics/activemodel-datastore/actions/workflows/ci.yml)
  
 ## Table of contents
  
