@@ -1,16 +1,18 @@
 Active Model Datastore
 ===================================
 
-Makes the [google-cloud-datastore](https://github.com/GoogleCloudPlatform/google-cloud-ruby/tree/master/google-cloud-datastore) gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel) conventions and compatible with your Rails 5+ applications. 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Makes the [google-cloud-datastore](https://cloud.google.com/ruby/docs/reference/google-cloud-datastore/latest)
+gem compliant with [active_model](https://github.com/rails/rails/tree/master/activemodel)
+conventions and compatible with your Rails 5+ applications.
 
-Why would you want to use Google's NoSQL [Cloud Datastore](https://cloud.google.com/datastore) 
-with Rails? 
+Why would you want to use Google's NoSQL
+[Firestore in Datastore mode](https://cloud.google.com/datastore) with Rails?
 
-When you want a Rails app backed by a managed, massively-scalable datastore solution. Cloud Datastore 
-automatically handles sharding and replication. It is a highly available and durable database that 
-automatically scales to handle your applications' load. Cloud Datastore is a schemaless database 
-suited for unstructured or semi-structured application data.
+Use it when you want a Rails app backed by a fully managed, massively scalable NoSQL database,
+without provisioning database servers or manually sharding data. Datastore stores records as
+entities with flexible properties, so your models do not require a fixed database schema. It
+automatically handles scaling and replication, provides highly available and durable storage, and
+supports indexed queries and ACID transactions.
 
 [![Gem Version](https://badge.fury.io/rb/activemodel-datastore.svg)](https://badge.fury.io/rb/activemodel-datastore)
  
@@ -20,9 +22,9 @@ suited for unstructured or semi-structured application data.
 - [Model Example](#model)
 - [Controller Example](#controller)
 - [Retrieving Entities](#queries)
-- [Datastore Consistency](#consistency)
+- [Datastore Consistency and Concurrency](#consistency)
 - [Datastore Indexes](#indexes)
-- [Datastore Emulator](#emulator)
+- [Firestore Emulator](#emulator)
 - [Example Rails App](#rails)
 - [CarrierWave File Uploads](#carrierwave)
 - [Track Changes](#track_changes)
@@ -47,12 +49,13 @@ gem 'activemodel-datastore'
   
 Create a Google Cloud account [here](https://cloud.google.com) and create a project.
 
-Google Cloud requires the Project ID and Service Account Credentials to connect to the Datastore API.
- 
-*Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to enable the 
-Google Cloud Datastore API. When running on Google Cloud Platform environments the Service Account 
-credentials will be discovered automatically. When running on other environments (such as AWS or Heroku)
-you need to create a service account with the role of editor and generate json credentials.*
+Follow the [activation instructions](https://cloud.google.com/datastore/docs/activate) to create a
+Firestore in Datastore mode database for the project.
+
+The Google Cloud client libraries use Application Default Credentials (ADC). On Google Cloud,
+credentials are discovered automatically from the service account attached to the application. Grant
+that service account only the access it needs; `roles/datastore.user` provides read/write access to
+Datastore data.
 
 Set your project id in an `ENV` variable named `GCLOUD_PROJECT`.
 
@@ -62,17 +65,17 @@ To locate your project ID:
 2. From the projects list, select the name of your project.
 3. On the left, click Dashboard. The project name and ID are displayed in the Dashboard.
 
-If you have an external application running on a platform outside of Google Cloud you also need to 
-provide the Service Account credentials. They are specified in two additional `ENV` variables named 
-`SERVICE_ACCOUNT_CLIENT_EMAIL` and `SERVICE_ACCOUNT_PRIVATE_KEY`. The values for these two `ENV` 
-variables will be in the downloaded service account json credentials file.
+For applications outside Google Cloud, configure ADC for the hosting environment. If a service account
+key is required, the Ruby client supports `GOOGLE_APPLICATION_CREDENTIALS` with the path to its JSON
+file. Active Model Datastore also supports the following environment variables for platforms where
+the JSON must be stored directly in environment variables:
 
 ```bash
 SERVICE_ACCOUNT_PRIVATE_KEY = -----BEGIN PRIVATE KEY-----\nMIIFfb3...5dmFtABy\n-----END PRIVATE KEY-----\n
 SERVICE_ACCOUNT_CLIENT_EMAIL = web-app@app-name.iam.gserviceaccount.com
 ```
 
-On Heroku the `ENV` variables can be set under 'Settings' -> 'Config Variables'.
+On Heroku the environment variables can be set under **Settings > Config Vars**.
 
 Active Model Datastore will then handle the authentication for you, and the datastore instance can 
 be accessed with `CloudDatastore.dataset`.
@@ -88,7 +91,7 @@ ActiveModel::Datastore.logger = MyApplication.logger
 Retry messages identify the Datastore operation, entity kind, failed-attempt elapsed time, exception,
 and retry delay.
 
-There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/master/test/support/datastore_example_rails_app/config/puma.rb).
+There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
  
@@ -106,18 +109,18 @@ class User
 end
 ```
 
-Data objects in Cloud Datastore are known as entities. Entities are of a kind. An entity has one 
+Data objects in Datastore are known as entities. Entities are of a kind. An entity has one
 or more named properties, each of which can have one or more values. Think of them like this:
 * 'Kind' (which is your table and the name of your Rails model)
 * 'Entity' (which is the record from the table)
 * 'Property' (which is the attribute of the record)
 
-The `entity_properties` method defines an Array of properties that belong to the entity in cloud 
-datastore. Define the attributes of your model using `attr_accessor`. With this approach, Rails 
+The `entity_properties` method defines an Array of properties that belong to the entity in
+Datastore. Define the attributes of your model using `attr_accessor`. With this approach, Rails
 deals solely with ActiveModel objects. The objects are converted to/from entities automatically 
 during save/query operations. You can still use virtual attributes on the model (such as the 
 `:state` attribute above) by simply excluding it from `entity_properties`. In this example state 
-is available to the model but won't be persisted with the entity in datastore.
+is available to the model but won't be persisted with the entity in Datastore.
 
 Validations work as you would expect:
 
@@ -235,12 +238,12 @@ end
 
 ## <a name="queries"></a>Retrieving Entities
 
-Each entity in Cloud Datastore has a key that uniquely identifies it. The key consists of the 
+Each entity in Datastore has a key that uniquely identifies it. The key consists of the
 following components:
 
 * the kind of the entity, which is User in these examples
 * an identifier for the individual entity, which can be either a a key name string or an integer numeric ID
-* an optional ancestor path locating the entity within the Cloud Datastore hierarchy
+* an optional ancestor path locating the entity within the Datastore hierarchy
 
 #### [all(options = {})](http://www.rubydoc.info/gems/activemodel-datastore/ActiveModel%2FDatastore%2FClassMethods:all)
 Queries entities using the provided options. When a limit option is provided queries up to the limit 
@@ -289,34 +292,34 @@ user = User.find_by(name: 'Joe')
 user = User.find_by(name: 'Bryce', ancestor: parent_key)
 ```
 
-Cloud Datastore has documentation on how [Datastore Queries](https://cloud.google.com/datastore/docs/concepts/queries#datastore-basic-query-ruby) 
-work, and pay special attention to the the [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
+Google documents how [Datastore queries](https://cloud.google.com/datastore/docs/concepts/queries)
+work, including their [restrictions](https://cloud.google.com/datastore/docs/concepts/queries#restrictions_on_queries).
 
-## <a name="consistency"></a>Datastore Consistency
+## <a name="consistency"></a>Datastore Consistency and Concurrency
 
-Cloud Datastore is a non-relational databases, or NoSQL database. It distributes data over many 
-machines and uses synchronous replication over a wide geographic area. Because of this architecture 
-it offers a balance of strong and eventual consistency.
+Firestore in Datastore mode is strongly consistent by default. Queries and key lookups reflect
+completed writes, including queries that do not use an ancestor. The legacy Cloud Datastore behavior
+where a newly created entity might not immediately appear in a global query does not apply.
 
-What is eventual consistency?
+Datastore supports three concurrency modes that determine how concurrent transactions interact:
 
-It means that an updated entity value may not be immediately visible when executing a query. 
-Eventual consistency is a theoretical guarantee that, provided no new updates to an entity are made, 
-all reads of the entity will eventually return the last updated value.
+- `PESSIMISTIC` uses reader/writer locks and is the default for new databases.
+- `OPTIMISTIC` allows concurrent transactions, but only the first conflicting transaction to commit
+  succeeds.
+- `OPTIMISTIC_WITH_ENTITY_GROUPS` preserves legacy Cloud Datastore entity-group transaction
+  semantics. Transactions are limited to 25 entity groups, writes to an entity group are limited to
+  one per second, and queries within transactions must be ancestor queries.
 
-In the context of a Rails app, there are times that eventual consistency is not ideal. For example,
-let's say you create a user entity with a key that looks like this:
+Use the following command to inspect a database's concurrency mode:
 
-`@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1>`
+```bash
+gcloud firestore databases describe --project=PROJECT_ID --database=DATABASE_ID
+```
 
-and then immediately redirect to the index view of users. There is a good chance that your new user 
-is not yet visible in the list. If you perform a refresh on the index view a second or two later 
-the user will appear.
-
-"Wait a minute!" you say. "This is crap!" you say. Fear not! We can make the query of users strongly
-consistent. We just need to use entity groups and ancestor queries. An entity group is a hierarchy 
-formed by a root entity and its children. To create an entity group, you specify an ancestor path 
-for the entity which is a parent key as part of the child key.
+Entity groups are hierarchies formed by a root entity and its children. They are useful for modeling
+related entities and are required by the transactional restrictions of
+`OPTIMISTIC_WITH_ENTITY_GROUPS`. To create an entity group, specify an ancestor path as part of the
+child entity's key.
 
 Before using the `save` method, assign the `parent_key_id` attribute an ID. Let's say that 12345 
 represents the ID of the company that the users belong to. The key of the user entity will now 
@@ -324,14 +327,10 @@ look like this:
 
 `@key=#<Google::Cloud::Datastore::Key @kind="User", @id=1, @parent=#<Google::Cloud::Datastore::Key @kind="ParentUser", @id=12345>>`
 
-All of the User entities will now belong to an entity group named ParentUser and can be queried by the 
+All of the User entities will now belong to an entity group named ParentUser and can be queried by the
 Company ID. When we query for the users we will provide User.parent_key(12345) as the ancestor option.
- 
-*Ancestor queries are always strongly consistent.*
-
-However, there is a small downside. Entities with the same ancestor are limited to 1 write per second.
-Also, the entity group relationship cannot be changed after creating the entity (as you can't modify 
-an entity's key after it has been saved).
+The entity group relationship cannot be changed after creating the entity because an entity's key
+cannot be modified after it has been saved.
 
 The Users controller would now look like this:
 
@@ -394,24 +393,25 @@ class UsersController < ApplicationController
 end
 ```
 
-See here for the Cloud Datastore documentation on [Data Consistency](https://cloud.google.com/datastore/docs/concepts/structuring_for_strong_consistency).
+See the Datastore documentation for details about
+[transactions, isolation, and concurrency modes](https://cloud.google.com/datastore/docs/concepts/transactions#concurrency_modes).
 
 ## <a name="indexes"></a>Datastore Indexes
 
-Every cloud datastore query requires an index. Yes, you read that correctly. Every single one. The 
+Every Datastore query computes its results using one or more indexes. The
 indexes contain entity keys in a sequence specified by the index's properties and, optionally, 
 the entity's ancestors.
 
 There are two types of indexes, *built-in* and *composite*.
 
 #### Built-in
-By default, Cloud Datastore automatically predefines an index for each property of each entity kind. 
+By default, Datastore automatically predefines an index for each property of each entity kind.
 These single property indexes are suitable for simple types of queries. These indexes are free and
 do not count against your index limit.
 
 #### Composite
-Composite index multiple property values per indexed entity. Composite indexes support complex 
-queries and are defined in an index.yaml file.
+Composite indexes include multiple property values per indexed entity. Composite indexes support
+complex queries and are defined in an `index.yaml` file.
 
 Composite indexes are required for queries of the following form:
 
@@ -423,65 +423,55 @@ Composite indexes are required for queries of the following form:
 
 *NOTE*: Inequality filters are LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL.
 
-Google has excellent doc regarding datastore indexes [here](https://cloud.google.com/datastore/docs/concepts/indexes).
+See Google's [Datastore index documentation](https://cloud.google.com/datastore/docs/concepts/indexes)
+for more information.
 
-The datastore emulator generates composite indexes in an index.yaml file automatically. The file
-can be found in /tmp/local_datastore/WEB-INF/index.yaml. If your localhost Rails app exercises every 
-possible query the application will issue, using every combination of filter and sort order, the 
-generated entries will represent your complete set of indexes.
+## <a name="emulator"></a>Firestore Emulator
 
-One thing to note is that the datastore emulator caches indexes. As you add and modify application 
-code you might find that the local datastore index.yaml contains indexes that are no longer needed. 
-In this scenario try deleting the index.yaml and restarting the emulator. Navigate through your Rails
-app and the index.yaml will be built from scratch.
+Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) and the Firestore emulator:
 
-## <a name="emulator"></a>Datastore Emulator
+```bash
+gcloud components install cloud-firestore-emulator
+```
 
-Install the Google Cloud SDK.
+The emulator requires Java 21 or later. Add the emulator executable to your shell's `PATH` because
+the test helpers invoke it directly:
 
-    $ curl https://sdk.cloud.google.com | bash
-    
-You can check the version of the SDK and the components installed with:
+```bash
+export PATH="$HOME/google-cloud-sdk/platform/cloud-firestore-emulator:$PATH"
+```
 
-    $ gcloud components list
-    
-Install the Cloud Datastore Emulator, which provides local emulation of the production Cloud 
-Datastore environment and the gRPC API. However, you'll need to do a small amount of configuration 
-before running the application against the emulator, see [here.](https://cloud.google.com/datastore/docs/tools/datastore-emulator)
-    
-    $ gcloud components install cloud-datastore-emulator 
-    
-Add the following line to your ~/.bash_profile:
-        
-    export PATH="~/google-cloud-sdk/platform/cloud-datastore-emulator:$PATH"
-        
-Restart your shell:
-        
-    exec -l $SHELL    
+The Firestore emulator runs in memory by default, so there is no datastore directory to create.
+Start it in Datastore mode on the development port with:
 
-To create the local development datastore execute the following from the root of the project:
+```bash
+cloud_firestore_emulator start --database-mode=datastore-mode --port=8180
+```
 
-    $ cloud_datastore_emulator create tmp/local_datastore
-    
-To create the local test datastore execute the following from the root of the project:
-    
-    $ cloud_datastore_emulator create tmp/test_datastore
+Set `DATASTORE_EMULATOR_HOST=localhost:8180` so the Ruby client connects to the emulator. The gem sets
+this automatically for Rails development and uses port 8181 for Rails tests.
 
-To start the local Cloud Datastore emulator:
+By default, the emulator does not enforce composite indexes. To validate an index configuration, add
+`--require-indexes --index-file=./index.yaml` when starting it. See Google's
+[Firestore in Datastore mode emulator documentation](https://cloud.google.com/datastore/docs/emulator)
+for more information.
 
-    $ cloud_datastore_emulator start --port=8180 tmp/local_datastore
-    
 ## <a name="rails"></a>Example Rails App
 
 There is an example Rails 8.1 app in the test directory [here](https://github.com/Agrimatics/activemodel-datastore/tree/main/test/support/datastore_example_rails_app).
 
- ```bash
- $ bundle
- $ cloud_datastore_emulator create tmp/local_datastore
- $ cloud_datastore_emulator create tmp/test_datastore
- $ ./start-local-datastore.sh
- $ rails s
- ```
+Start the Firestore emulator in Datastore mode in one terminal:
+
+```bash
+cloud_firestore_emulator start --database-mode=datastore-mode --port=8180
+```
+
+Then start the example application in another terminal:
+
+```bash
+bundle install
+rails server
+```
  
  Navigate to http://localhost:3000.
  
@@ -587,13 +577,12 @@ class Recipe
 end
 ```
 
- Alternatively,`:reject_if` also accepts a symbol for using methods:
+Alternatively, `:reject_if` also accepts a symbol naming a method:
 
 ```ruby
 class Recipe
   def ingredients_attributes=(attributes)
-    reject_proc = proc { |attributes| attributes['name'].blank? }
-    assign_nested_attributes(:ingredients, attributes, reject_if: reject_recipes)
+    assign_nested_attributes(:ingredients, attributes, reject_if: :reject_recipes)
   end
 
   def reject_recipes(attributes)
@@ -604,12 +593,12 @@ end
 
 Within the parent model `valid?` will validate the parent and associated children and
 `nested_models` will return the child objects. If the nested form submitted params contained
-a truthy `_destroy` key, the appropriate nested_models will have `marked_for_destruction` set
-to True.
+a truthy `_destroy` key, the appropriate nested models will have `marked_for_destruction` set
+to `true`.
 
 ## <a name="gotchas"></a>Datastore Gotchas
 #### Ordering of query results is undefined when no sort order is specified.
 When a query does not specify a sort order, the results are returned in the order they are retrieved. 
-As Cloud Datastore implementation evolves (or if a project's indexes change), this order may change. 
+As the Datastore implementation evolves (or if a project's indexes change), this order may change.
 Therefore, if your application requires its query results in a particular order, be sure to specify 
 that sort order explicitly in the query.
