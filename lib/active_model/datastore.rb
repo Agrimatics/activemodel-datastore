@@ -414,18 +414,22 @@ module ActiveModel::Datastore
       query_options(query, options)
     end
 
-    def retry_on_exception?(max_retry_count = 5, operation: 'unknown', kind: name)
+    def retry_on_exception?(max_retry_count = 5, operation: nil, kind: name)
       retries = 0
       sleep_time = 0.25
       begin
-        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
         return false if retries >= max_retry_count
 
-        elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
-        message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
-                  "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        if operation
+          elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+          message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
+                    "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        else
+          message = "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        end
         ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
@@ -435,18 +439,22 @@ module ActiveModel::Datastore
       end
     end
 
-    def retry_on_exception(max_retry_count = 5, operation: 'unknown', kind: name)
+    def retry_on_exception(max_retry_count = 5, operation: nil, kind: name)
       retries = 0
       sleep_time = 0.25
       begin
-        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
         raise e if retries >= max_retry_count
 
-        elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
-        message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
-                  "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        if operation
+          elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+          message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
+                    "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
+        else
+          message = "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
+        end
         ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time

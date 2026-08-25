@@ -88,9 +88,6 @@ configure it during application initialization:
 ActiveModel::Datastore.logger = MyApplication.logger
 ```
 
-Retry messages identify the Datastore operation, entity kind, failed-attempt elapsed time, exception,
-and retry delay.
-
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
