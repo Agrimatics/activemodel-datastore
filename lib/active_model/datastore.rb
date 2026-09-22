@@ -137,7 +137,7 @@ module ActiveModel::Datastore
 
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities,
-                         :retry_read
+                         :retry_read, :log_retry_failure
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id, :parent_key_id, :entity_property_values
   end
@@ -426,16 +426,12 @@ module ActiveModel::Datastore
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
-        return false if e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
+        giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
+        ending = "retrying in #{sleep_time}#{' s' if operation}"
+        ending = "giving up after #{retries + 1} attempts" if giving_up
+        log_retry_failure(e, ending, operation: operation, kind: kind, started_at: started_at)
+        return false if giving_up
 
-        if operation
-          elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
-          message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
-                    "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
-        else
-          message = "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
-        end
-        ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
         retries += 1
@@ -451,16 +447,12 @@ module ActiveModel::Datastore
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
-        raise if e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
+        giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
+        ending = "retrying in #{sleep_time}#{' s' if operation}"
+        ending = "giving up after #{retries + 1} attempts" if giving_up
+        log_retry_failure(e, ending, operation: operation, kind: kind, started_at: started_at)
+        raise if giving_up
 
-        if operation
-          elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
-          message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
-                    "#{e.message.inspect}; retrying in #{sleep_time} s\e[0m"
-        else
-          message = "\e[33mRescued exception #{e.message.inspect}, retrying in #{sleep_time}\e[0m"
-        end
-        ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
         # 0.25, 0.5, 1, 2, and 4 second between retries.
         sleep sleep_time
         retries += 1
@@ -477,6 +469,17 @@ module ActiveModel::Datastore
     end
 
     # **************** private ****************
+
+    def log_retry_failure(error, ending, operation:, kind:, started_at:)
+      if operation
+        elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+        message = "\e[33mDatastore #{operation} failed for #{kind} after #{elapsed_ms} ms: " \
+                  "#{error.message.inspect}; #{ending}\e[0m"
+      else
+        message = "\e[33mRescued exception #{error.message.inspect}, #{ending}\e[0m"
+      end
+      ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
+    end
 
     def retry_read(operation, &block)
       retry_on_exception(ActiveModel::Datastore.read_retry_count, operation: operation, &block)
