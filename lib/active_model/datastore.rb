@@ -127,8 +127,17 @@ module ActiveModel::Datastore
     @logger = logger
   end
 
+  def self.read_retry_count
+    @read_retry_count || 5
+  end
+
+  def self.read_retry_count=(count)
+    @read_retry_count = count
+  end
+
   included do
-    private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities
+    private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities,
+                         :retry_read
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id, :parent_key_id, :entity_property_values
   end
@@ -239,7 +248,7 @@ module ActiveModel::Datastore
     def find_entity(id_or_name, parent = nil)
       key = CloudDatastore.dataset.key name, id_or_name
       key.parent = parent if parent.present?
-      retry_on_exception(operation: 'find') { CloudDatastore.dataset.find key }
+      retry_read('find') { CloudDatastore.dataset.find key }
     end
 
     ##
@@ -300,9 +309,7 @@ module ActiveModel::Datastore
     def all(options = {})
       next_cursor = nil
       query = build_query(options)
-      query_results = retry_on_exception(operation: 'run query') do
-        CloudDatastore.dataset.run query
-      end
+      query_results = retry_read('run query') { CloudDatastore.dataset.run query }
       if options[:limit]
         next_cursor = query_results.cursor if query_results.size == options[:limit]
         return from_entities(query_results.all), next_cursor
@@ -354,9 +361,7 @@ module ActiveModel::Datastore
       query.ancestor(args[:ancestor]) if args[:ancestor]
       query.limit(1)
       query.where(args.keys[0].to_s, '=', args.values[0])
-      query_results = retry_on_exception(operation: 'run query') do
-        CloudDatastore.dataset.run query
-      end
+      query_results = retry_read('run query') { CloudDatastore.dataset.run query }
       from_entity(query_results.first)
     end
 
@@ -421,7 +426,7 @@ module ActiveModel::Datastore
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
-        return false if retries >= max_retry_count
+        return false if e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
 
         if operation
           elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
@@ -446,7 +451,7 @@ module ActiveModel::Datastore
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         yield
       rescue Google::Cloud::Error => e
-        raise e if retries >= max_retry_count
+        raise if e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
 
         if operation
           elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
@@ -472,6 +477,10 @@ module ActiveModel::Datastore
     end
 
     # **************** private ****************
+
+    def retry_read(operation, &block)
+      retry_on_exception(ActiveModel::Datastore.read_retry_count, operation: operation, &block)
+    end
 
     def query_options(query, options)
       query.ancestor(options[:ancestor]) if options[:ancestor]
@@ -521,7 +530,7 @@ module ActiveModel::Datastore
     def find_all_entities(ids_or_names, parent)
       keys = ids_or_names.map { |id| CloudDatastore.dataset.key name, id }
       keys.map { |key| key.parent = parent } if parent.present?
-      retry_on_exception(operation: 'find all') { CloudDatastore.dataset.find_all keys }
+      retry_read('find all') { CloudDatastore.dataset.find_all keys }
     end
 
     def build_model(entity)

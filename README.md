@@ -89,6 +89,15 @@ configure it during application initialization:
 ActiveModel::Datastore.logger = MyApplication.logger
 ```
 
+To change the gem's read retry count (default: `5`), configure it during initialization:
+
+```ruby
+ActiveModel::Datastore.read_retry_count = 2
+```
+
+Set it to `0` to disable read retries. Write retry counts are unchanged. Invalid argument errors
+are never retried.
+
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example

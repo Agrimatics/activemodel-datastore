@@ -1,3 +1,7 @@
+### Unreleased
+* stop retrying invalid argument errors
+* make read retry counts configurable independently of writes
+
 ### 0.9.0 / 2026-08-24
 * identify the Datastore operation, entity kind, and failed-attempt elapsed time in retry logs
 * use a configurable retry logger that defaults to Rails.logger and falls back to standard output
