@@ -1,6 +1,7 @@
-### Unreleased
+### 0.10.0 / 2026-09-22
 * stop retrying invalid argument errors
 * make read retry counts configurable independently of writes
+* log a warning when a retry chain gives up, including its attempt count
 
 ### 0.9.0 / 2026-08-24
 * identify the Datastore operation, entity kind, and failed-attempt elapsed time in retry logs
