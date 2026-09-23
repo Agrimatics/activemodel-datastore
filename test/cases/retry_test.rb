@@ -103,14 +103,14 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
   end
 
   def test_retry_on_exception_question_mark_returns_false_when_retries_are_exhausted
-    result = MockModel.retry_on_exception?(0) { raise Google::Cloud::Error, 'retry error' }
+    result = run_retry(:retry_on_exception?, 0) { raise Google::Cloud::Error, 'retry error' }
 
     refute result
   end
 
   def test_retry_on_exception_raises_when_retries_are_exhausted
     error = assert_raises(Google::Cloud::Error) do
-      MockModel.retry_on_exception(0) { raise Google::Cloud::Error, 'retry error' }
+      run_retry(:retry_on_exception, 0) { raise Google::Cloud::Error, 'retry error' }
     end
 
     assert_equal 'retry error', error.message
