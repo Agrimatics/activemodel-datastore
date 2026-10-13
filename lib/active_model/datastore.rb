@@ -135,6 +135,14 @@ module ActiveModel::Datastore
     @read_retry_count = count
   end
 
+  def self.preallocate_ids
+    @preallocate_ids || false
+  end
+
+  def self.preallocate_ids=(enabled)
+    @preallocate_ids = enabled
+  end
+
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities,
                          :retry_read, :log_retry_failure
@@ -219,6 +227,8 @@ module ActiveModel::Datastore
 
     run_callbacks :save do
       entity = build_entity(parent)
+      next false unless preallocate_entity_id(entity)
+
       success = self.class.retry_on_exception?(operation: 'save') do
         CloudDatastore.dataset.save entity
       end
@@ -226,6 +236,18 @@ module ActiveModel::Datastore
       self.parent_key_id = entity.key.parent.id if entity.key.parent.present?
       success
     end
+  end
+
+  def preallocate_entity_id(entity)
+    return true unless ActiveModel::Datastore.preallocate_ids && entity.key.incomplete?
+
+    # A commit can succeed even when its response fails. Reuse one key for every save attempt.
+    key = self.class.retry_on_exception?(operation: 'allocate id') do
+      CloudDatastore.dataset.allocate_ids(entity.key, 1).first
+    end
+    return false unless key
+
+    entity.key = key
   end
 
   # Methods defined here will be class methods when 'include ActiveModel::Datastore'.

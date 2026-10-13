@@ -98,6 +98,23 @@ ActiveModel::Datastore.read_retry_count = 2
 Set it to `0` to disable read retries. Write retry counts are unchanged. Invalid argument errors
 are never retried.
 
+ID preallocation is disabled by default, preserving the existing save behavior. To enable it for
+models saved through `save` or `save!`, configure it during application initialization:
+
+```ruby
+ActiveModel::Datastore.preallocate_ids = true
+```
+
+When enabled, a new entity without an ID gets a complete key before the save retry loop. Every
+attempt in that loop uses the same key, preventing duplicate entities if a commit succeeds but its
+response fails. This adds one allocation RPC per create under normal conditions; allocation failures
+use the existing retry policy. Existing numeric IDs and named keys require no allocation, and parent
+paths are preserved. If allocation fails after retries, `save` returns `false` and `save!` raises
+`ActiveModel::Datastore::EntityNotSavedError` without attempting the write.
+
+Set the option to `false` to disable preallocation. It does not affect direct calls to
+`CloudDatastore.dataset.save` or provide deduplication across separate save calls or requests.
+
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example

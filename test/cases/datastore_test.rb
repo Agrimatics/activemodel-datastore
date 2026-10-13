@@ -1,6 +1,17 @@
 require 'test_helper'
+require 'minitest/mock'
 
 class ActiveModel::DatastoreTest < ActiveSupport::TestCase
+  def setup
+    @preallocate_ids = ActiveModel::Datastore.preallocate_ids
+    super
+  end
+
+  def teardown
+    ActiveModel::Datastore.preallocate_ids = @preallocate_ids
+    super
+  end
+
   # Packaging tests.
 
   test 'test that it has a version number' do
@@ -97,6 +108,221 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     assert_equal count + 1, MockModel.count_test_entities
     assert_not_nil mock_model.id
     assert_nil mock_model.parent_key_id
+  end
+
+  test 'save leaves id allocation to datastore by default and when disabled' do
+    assert_equal false, ActiveModel::Datastore.preallocate_ids
+    dataset = CloudDatastore.dataset
+    [:default, :disabled].each do |configuration|
+      if configuration == :disabled
+        ActiveModel::Datastore.preallocate_ids = true
+        ActiveModel::Datastore.preallocate_ids = false
+      end
+      model = MockModel.new(name: 'Server assigned ID')
+      saved_entities = nil
+      save = lambda do |entity|
+        assert entity.key.incomplete?
+        entity.key.id = 12345
+        saved_entities = [entity]
+      end
+
+      dataset.stub(:allocate_ids, ->(*) { flunk 'preallocation must be explicitly enabled' }) do
+        dataset.stub(:save, save) do
+          result = model.save
+          assert_same saved_entities, result
+        end
+      end
+      assert_equal 12345, model.id
+    end
+  end
+
+  test 'save persists a preallocated key with its parent' do
+    ActiveModel::Datastore.preallocate_ids = true
+    model = MockModel.new(name: 'Preallocated entity')
+    parent = CloudDatastore.dataset.key('Company', MOCK_PARENT_ID)
+
+    assert model.save(parent)
+
+    entity = MockModel.find_entity(model.id, parent)
+    assert_equal 'Preallocated entity', entity['name']
+    assert_equal model.id, entity.key.id
+    assert_equal MOCK_PARENT_ID, model.parent_key_id
+    assert_equal parent.to_grpc.path, entity.key.parent.to_grpc.path
+    assert_equal 1, MockModel.count_test_entities
+  end
+
+  test 'save allocates a complete key before saving and preserves its parent' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    parent = dataset.key('Company', MOCK_PARENT_ID)
+    [nil, parent, MockModel.parent_key(MOCK_PARENT_ID)].each do |expected_parent|
+      model = MockModel.new(name: 'Allocated ID', parent_key_id: expected_parent&.id)
+      allocated_key = dataset.key('MockModel', 12345)
+      allocated_key.parent = expected_parent if expected_parent
+      allocations = 0
+      allocate = lambda do |key, count|
+        allocations += 1
+        assert key.incomplete?
+        assert_equal 'MockModel', key.kind
+        if expected_parent
+          assert_equal expected_parent.to_grpc, key.parent.to_grpc
+        else
+          assert_nil key.parent
+        end
+        assert_equal 1, count
+        [allocated_key]
+      end
+      saved_entities = nil
+      save = lambda do |entity|
+        assert entity.key.complete?
+        assert_equal allocated_key, entity.key
+        saved_entities = [entity]
+      end
+
+      dataset.stub(:allocate_ids, allocate) do
+        dataset.stub(:save, save) do
+          explicit_parent = expected_parent == parent ? parent : nil
+          result = model.save(explicit_parent)
+          assert_same saved_entities, result
+        end
+      end
+      assert_equal 1, allocations
+      assert_equal 12345, model.id
+      if expected_parent
+        assert_equal expected_parent.id, model.parent_key_id
+      else
+        assert_nil model.parent_key_id
+      end
+    end
+  end
+
+  test 'save retries with the same allocated key' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Retried create')
+    allocated_key = dataset.key('MockModel', 12345)
+    allocations = 0
+    allocate = lambda do |*_args|
+      allocations += 1
+      [allocated_key]
+    end
+    attempts = []
+    save = lambda do |entity|
+      attempts << entity.key
+      raise Google::Cloud::Error, 'commit response lost' if attempts.size == 1
+
+      [entity]
+    end
+
+    capture_io do
+      dataset.stub(:allocate_ids, allocate) do
+        dataset.stub(:save, save) { assert model.save }
+      end
+    end
+    assert_equal [allocated_key, allocated_key], attempts
+    assert_equal 1, allocations
+    assert_equal 12345, model.id
+  end
+
+  test 'save retries allocation before attempting the write' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Retried allocation')
+    allocated_key = dataset.key('MockModel', 12345)
+    allocations = 0
+    allocate = lambda do |*_args|
+      allocations += 1
+      raise Google::Cloud::Error, 'allocation unavailable' if allocations == 1
+
+      [allocated_key]
+    end
+    save = lambda do |entity|
+      assert_equal 2, allocations
+      assert_equal allocated_key, entity.key
+      [entity]
+    end
+
+    capture_io do
+      dataset.stub(:allocate_ids, allocate) do
+        dataset.stub(:save, save) { assert model.save }
+      end
+    end
+    assert_equal 2, allocations
+    assert_equal 12345, model.id
+  end
+
+  test 'exhausted allocation retries prevent saving' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Failed allocation')
+    attempts = 0
+    allocate = lambda do |*_args|
+      attempts += 1
+      raise Google::Cloud::Error, 'allocation unavailable'
+    end
+
+    capture_io do
+      dataset.stub(:allocate_ids, allocate) do
+        dataset.stub(:save, ->(*) { flunk 'must not save without an allocated key' }) do
+          assert_equal false, model.save
+        end
+      end
+    end
+    assert_equal 6, attempts
+    assert_nil model.id
+    refute model.persisted?
+  end
+
+  test 'save bang raises entity not saved when allocation fails' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Invalid allocation')
+    allocate = ->(*) { raise Google::Cloud::InvalidArgumentError, 'invalid allocation' }
+
+    capture_io do
+      dataset.stub(:allocate_ids, allocate) do
+        dataset.stub(:save, ->(*) { flunk 'must not save without an allocated key' }) do
+          assert_raises(ActiveModel::Datastore::EntityNotSavedError) { model.save! }
+        end
+      end
+    end
+    assert_nil model.id
+  end
+
+  test 'failed save does not assign the allocated id to the model' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Failed save')
+    allocated_key = dataset.key('MockModel', 12345)
+    save = ->(*) { raise Google::Cloud::InvalidArgumentError, 'invalid entity' }
+
+    capture_io do
+      dataset.stub(:allocate_ids, [allocated_key]) do
+        dataset.stub(:save, save) { assert_equal false, model.save }
+      end
+    end
+    assert_nil model.id
+    refute model.persisted?
+  end
+
+  test 'saving and updating complete keys do not allocate ids' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    [12345, 'named-key'].each do |id|
+      [:save, :update].each do |operation|
+        model = MockModel.new(name: 'Existing key', id: id)
+        save = lambda do |entity|
+          assert_equal dataset.key('MockModel', id).to_grpc, entity.key.to_grpc
+          [entity]
+        end
+        dataset.stub(:allocate_ids, ->(*) { flunk 'must not allocate a complete key' }) do
+          dataset.stub(:save, save) do
+            args = operation == :update ? [{ name: 'Updated' }] : []
+            assert model.public_send(operation, *args)
+          end
+        end
+      end
+    end
   end
 
   test 'save with parent' do
