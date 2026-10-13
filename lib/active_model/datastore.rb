@@ -135,7 +135,8 @@ module ActiveModel::Datastore
   end
 
   def self.slow_operation_threshold=(seconds)
-    @slow_operation_threshold = seconds
+    seconds = nil if seconds.is_a?(String) && seconds.strip.empty?
+    @slow_operation_threshold = seconds.nil? ? nil : Float(seconds)
   end
 
   def self.read_retry_count

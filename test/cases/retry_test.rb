@@ -133,7 +133,7 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
     end
 
     define_method("test_#{helper}_uses_custom_threshold_and_logger") do
-      ActiveModel::Datastore.slow_operation_threshold = 0.5
+      ActiveModel::Datastore.slow_operation_threshold = '0.5'
       logger = Minitest::Mock.new
       logger.expect(:warn, nil, ["\e[33mDatastore transaction for Local took 750 ms\e[0m"])
       ActiveModel::Datastore.logger = logger
@@ -293,6 +293,31 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
 
   def test_slow_operation_threshold_defaults_to_five
     assert_equal 5, ActiveModel::Datastore.slow_operation_threshold
+  end
+
+  def test_slow_operation_threshold_accepts_numbers_and_numeric_strings
+    [[2, 2.0], [0.5, 0.5], ['2', 2.0], ['0.5', 0.5], ['0', 0.0]].each do |value, expected|
+      ActiveModel::Datastore.slow_operation_threshold = value
+
+      assert_equal expected, ActiveModel::Datastore.slow_operation_threshold
+    end
+  end
+
+  def test_slow_operation_threshold_disables_warnings_for_nil_and_blank_strings
+    [nil, '', '  '].each do |value|
+      ActiveModel::Datastore.slow_operation_threshold = 2
+      ActiveModel::Datastore.slow_operation_threshold = value
+
+      assert_nil ActiveModel::Datastore.slow_operation_threshold
+    end
+  end
+
+  def test_slow_operation_threshold_rejects_invalid_values_without_changing_configuration
+    ActiveModel::Datastore.slow_operation_threshold = 2
+    [['abc', ArgumentError], [false, TypeError]].each do |value, error|
+      assert_raises(error) { ActiveModel::Datastore.slow_operation_threshold = value }
+      assert_equal 2.0, ActiveModel::Datastore.slow_operation_threshold
+    end
   end
 
   def test_find_entity_uses_configured_read_retry_count
