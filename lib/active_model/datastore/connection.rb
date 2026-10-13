@@ -31,8 +31,7 @@ module CloudDatastore
   end
 
   def self.dataset
-    timeout = ENV.fetch('DATASTORE_NETWORK_TIMEOUT', 15).to_i
-    @dataset ||= Google::Cloud.datastore(timeout: timeout)
+    @dataset ||= Google::Cloud.datastore
   end
 
   def self.reset_dataset

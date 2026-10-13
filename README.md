@@ -98,6 +98,40 @@ ActiveModel::Datastore.read_retry_count = 2
 Set it to `0` to disable read retries. Write retry counts are unchanged. Invalid argument errors
 are never retried.
 
+ID preallocation is disabled by default, preserving the existing save behavior. To enable it for
+models saved through `save` or `save!`, configure it during application initialization:
+
+```ruby
+ActiveModel::Datastore.preallocate_ids = true
+```
+
+The setter uses `ActiveModel::Type::Boolean`, so environment-variable strings such as `"false"`,
+`"0"`, and `"off"` disable preallocation. Unset (`nil`) and empty values also leave it disabled.
+
+When enabled, a new entity without an ID gets a complete key before the save retry loop. Every
+attempt in that loop uses the same key, preventing duplicate entities if a commit succeeds but its
+response fails. This adds one allocation RPC per create under normal conditions. Existing numeric
+IDs and named keys require no allocation, and parent paths are preserved.
+
+Allocation writes nothing, so it is retried at most twice before giving up, leaving more of the
+request's time for the save. If allocation still fails, `save` returns `false` and `save!` raises
+`ActiveModel::Datastore::EntityNotSavedError` without attempting the write.
+
+Set the option to `false` to disable preallocation. It does not cover `update` on a model without an
+ID, direct calls to `CloudDatastore.dataset.save`, or deduplication across separate save calls or
+requests.
+
+Each Datastore RPC has its own 60-second default deadline in the underlying client, which takes
+precedence over the client-wide `timeout` option. Applications with a request timeout (for example,
+Heroku's 30-second router timeout or Rack::Timeout) should give allocation a short deadline so a
+stalled allocation cannot use the time the save needs:
+
+```ruby
+Google::Cloud::Datastore::V1::Datastore::Client.configure do |config|
+  config.rpcs.allocate_ids.timeout = 3
+end
+```
+
 There is an example Puma config file [here](https://github.com/Agrimatics/activemodel-datastore/blob/main/test/support/datastore_example_rails_app/config/puma.rb).
  
 ## <a name="model"></a>Model Example
