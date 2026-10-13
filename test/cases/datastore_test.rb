@@ -215,8 +215,10 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     end
 
     capture_io do
-      dataset.stub(:allocate_ids, allocate) do
-        dataset.stub(:save, save) { assert model.save }
+      MockModel.stub(:sleep, ->(_) {}) do
+        dataset.stub(:allocate_ids, allocate) do
+          dataset.stub(:save, save) { assert model.save }
+        end
       end
     end
     assert_equal [allocated_key, allocated_key], attempts
@@ -243,8 +245,10 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     end
 
     capture_io do
-      dataset.stub(:allocate_ids, allocate) do
-        dataset.stub(:save, save) { assert model.save }
+      MockModel.stub(:sleep, ->(_) {}) do
+        dataset.stub(:allocate_ids, allocate) do
+          dataset.stub(:save, save) { assert model.save }
+        end
       end
     end
     assert_equal 2, allocations
@@ -262,9 +266,11 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     end
 
     capture_io do
-      dataset.stub(:allocate_ids, allocate) do
-        dataset.stub(:save, ->(*) { flunk 'must not save without an allocated key' }) do
-          assert_equal false, model.save
+      MockModel.stub(:sleep, ->(_) {}) do
+        dataset.stub(:allocate_ids, allocate) do
+          dataset.stub(:save, ->(*) { flunk 'must not save without an allocated key' }) do
+            assert_equal false, model.save
+          end
         end
       end
     end
