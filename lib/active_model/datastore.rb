@@ -140,7 +140,7 @@ module ActiveModel::Datastore
   end
 
   def self.preallocate_ids=(enabled)
-    @preallocate_ids = enabled
+    @preallocate_ids = ActiveModel::Type::Boolean.new.cast(enabled)
   end
 
   included do

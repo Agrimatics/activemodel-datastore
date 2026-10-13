@@ -113,11 +113,12 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
   test 'save leaves id allocation to datastore by default and when disabled' do
     assert_equal false, ActiveModel::Datastore.preallocate_ids
     dataset = CloudDatastore.dataset
-    [:default, :disabled].each do |configuration|
-      if configuration == :disabled
+    [:default, false, 'false', '0', 'off', nil, ''].each do |configuration|
+      unless configuration == :default
         ActiveModel::Datastore.preallocate_ids = true
-        ActiveModel::Datastore.preallocate_ids = false
+        ActiveModel::Datastore.preallocate_ids = configuration
       end
+      assert_equal false, ActiveModel::Datastore.preallocate_ids
       model = MockModel.new(name: 'Server assigned ID')
       saved_entities = nil
       save = lambda do |entity|
@@ -136,8 +137,9 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
     end
   end
 
-  test 'save persists a preallocated key with its parent' do
-    ActiveModel::Datastore.preallocate_ids = true
+  test 'save persists a preallocated key with its parent when enabled with a string' do
+    ActiveModel::Datastore.preallocate_ids = 'true'
+    assert_equal true, ActiveModel::Datastore.preallocate_ids
     model = MockModel.new(name: 'Preallocated entity')
     parent = CloudDatastore.dataset.key('Company', MOCK_PARENT_ID)
 

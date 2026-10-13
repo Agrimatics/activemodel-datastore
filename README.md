@@ -105,6 +105,9 @@ models saved through `save` or `save!`, configure it during application initiali
 ActiveModel::Datastore.preallocate_ids = true
 ```
 
+The setter uses `ActiveModel::Type::Boolean`, so environment-variable strings such as `"false"`,
+`"0"`, and `"off"` disable preallocation. Unset (`nil`) and empty values also leave it disabled.
+
 When enabled, a new entity without an ID gets a complete key before the save retry loop. Every
 attempt in that loop uses the same key, preventing duplicate entities if a commit succeeds but its
 response fails. This adds one allocation RPC per create under normal conditions; allocation failures
