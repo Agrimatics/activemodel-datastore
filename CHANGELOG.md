@@ -1,6 +1,5 @@
 ### Unreleased
 
-* warn when a successful Datastore attempt exceeds `ActiveModel::Datastore.slow_operation_threshold` (default: 5 seconds; `nil` disables slow-success warnings)
 * add opt-in ID preallocation via `ActiveModel::Datastore.preallocate_ids` (disabled by default) to prevent duplicate entities when retrying a save; allocation is retried at most twice
 * remove `DATASTORE_NETWORK_TIMEOUT`, which never took effect because the Datastore client's per-RPC 60-second deadlines override the client-wide timeout; set `Google::Cloud::Datastore::V1::Datastore::Client.configure { |c| c.rpcs.<rpc>.timeout = ... }` instead
 

@@ -130,14 +130,6 @@ module ActiveModel::Datastore
     @logger = logger
   end
 
-  def self.slow_operation_threshold
-    defined?(@slow_operation_threshold) ? @slow_operation_threshold : 5
-  end
-
-  def self.slow_operation_threshold=(seconds)
-    @slow_operation_threshold = seconds
-  end
-
   def self.read_retry_count
     @read_retry_count || 5
   end
@@ -156,7 +148,7 @@ module ActiveModel::Datastore
 
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities,
-                         :retry_read, :log_retry_failure, :log_slow_operation
+                         :retry_read, :log_retry_failure
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id, :parent_key_id, :entity_property_values
   end
@@ -457,9 +449,7 @@ module ActiveModel::Datastore
       sleep_time = 0.25
       begin
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
-        result = yield
-        log_slow_operation(operation: operation, kind: kind, started_at: started_at)
-        result
+        yield
       rescue Google::Cloud::Error => e
         giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
         ending = "retrying in #{sleep_time}#{' s' if operation}"
@@ -480,9 +470,7 @@ module ActiveModel::Datastore
       sleep_time = 0.25
       begin
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
-        result = yield
-        log_slow_operation(operation: operation, kind: kind, started_at: started_at)
-        result
+        yield
       rescue Google::Cloud::Error => e
         giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
         ending = "retrying in #{sleep_time}#{' s' if operation}"
@@ -506,17 +494,6 @@ module ActiveModel::Datastore
     end
 
     # **************** private ****************
-
-    def log_slow_operation(operation:, kind:, started_at:)
-      threshold = ActiveModel::Datastore.slow_operation_threshold
-      return unless operation && threshold
-
-      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
-      return unless elapsed > threshold
-
-      message = "\e[33mDatastore #{operation} for #{kind} took #{(elapsed * 1000).round} ms\e[0m"
-      ActiveModel::Datastore.logger ? ActiveModel::Datastore.logger.warn(message) : puts(message)
-    end
 
     def log_retry_failure(error, ending, operation:, kind:, started_at:)
       if operation
