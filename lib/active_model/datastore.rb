@@ -119,6 +119,9 @@ module ActiveModel::Datastore
   include ActiveModel::Datastore::PropertyValues
   include ActiveModel::Datastore::TrackChanges
 
+  # Allocation writes nothing, so a failure can give up quickly and leave time for the save.
+  ALLOCATE_RETRY_COUNT = 2
+
   def self.logger
     @logger || (Rails.logger if defined?(Rails) == 'constant')
   end
@@ -241,8 +244,9 @@ module ActiveModel::Datastore
     return true unless ActiveModel::Datastore.preallocate_ids && entity.key.incomplete?
 
     # A commit can succeed even when its response fails. Reuse one key for every save attempt.
-    key = self.class.retry_on_exception?(operation: 'allocate id') do
-      CloudDatastore.dataset.allocate_ids(entity.key, 1).first
+    key = self.class.retry_on_exception?(ALLOCATE_RETRY_COUNT, operation: 'allocate id') do
+      CloudDatastore.dataset.allocate_ids(entity.key, 1).first ||
+        raise(Google::Cloud::Error, 'allocate_ids returned no key')
     end
     return false unless key
 

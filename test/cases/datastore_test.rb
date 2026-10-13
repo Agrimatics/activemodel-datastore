@@ -277,11 +277,35 @@ class ActiveModel::DatastoreTest < ActiveSupport::TestCase
         end
       end
     end
-    assert_equal 6, attempts
+    assert_equal ActiveModel::Datastore::ALLOCATE_RETRY_COUNT + 1, attempts
     assert_nil model.id
     refute model.persisted?
     assert_equal MOCK_PARENT_ID, model.parent_key_id
     assert_equal parent.to_grpc.path, model.build_entity.key.parent.to_grpc.path
+  end
+
+  test 'empty allocation results are retried and logged' do
+    ActiveModel::Datastore.preallocate_ids = true
+    dataset = CloudDatastore.dataset
+    model = MockModel.new(name: 'Empty allocation')
+    attempts = 0
+    allocate = lambda do |*_args|
+      attempts += 1
+      []
+    end
+
+    out, = capture_io do
+      MockModel.stub(:sleep, ->(_) {}) do
+        dataset.stub(:allocate_ids, allocate) do
+          dataset.stub(:save, ->(*) { flunk 'must not save without an allocated key' }) do
+            assert_equal false, model.save
+          end
+        end
+      end
+    end
+    assert_equal ActiveModel::Datastore::ALLOCATE_RETRY_COUNT + 1, attempts
+    assert_includes out, 'allocate_ids returned no key'
+    assert_nil model.id
   end
 
   test 'save bang raises entity not saved when allocation fails' do
