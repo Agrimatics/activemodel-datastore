@@ -5,11 +5,13 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
   def setup
     @delays = []
     @read_retry_count = ActiveModel::Datastore.read_retry_count
+    @slow_operation_threshold = ActiveModel::Datastore.slow_operation_threshold
   end
 
   def teardown
     ActiveModel::Datastore.logger = nil
     ActiveModel::Datastore.read_retry_count = @read_retry_count
+    ActiveModel::Datastore.slow_operation_threshold = @slow_operation_threshold
   end
 
   def test_retry_on_exception_question_mark_returns_successful_result_without_retrying
@@ -117,6 +119,69 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
   end
 
   [:retry_on_exception, :retry_on_exception?].each do |helper|
+    define_method("test_#{helper}_logs_slow_success_without_changing_results") do
+      [nil, false, Object.new].each do |value|
+        times = [1.0, 7.0]
+        output, = capture_io do
+          Process.stub(:clock_gettime, ->(_) { times.shift }) do
+            assert_same value, MockModel.public_send(helper, operation: 'save') { value }
+          end
+        end
+
+        assert_equal "\e[33mDatastore save for MockModel took 6000 ms\e[0m\n", output
+      end
+    end
+
+    define_method("test_#{helper}_uses_custom_threshold_and_logger") do
+      ActiveModel::Datastore.slow_operation_threshold = 0.5
+      logger = Minitest::Mock.new
+      logger.expect(:warn, nil, ["\e[33mDatastore transaction for Local took 750 ms\e[0m"])
+      ActiveModel::Datastore.logger = logger
+      times = [1.0, 1.75]
+
+      Process.stub(:clock_gettime, ->(_) { times.shift }) do
+        result = MockModel.public_send(helper, operation: 'transaction', kind: 'Local') { :success }
+        assert_equal :success, result
+      end
+      logger.verify
+    end
+
+    define_method("test_#{helper}_keeps_fast_disabled_and_unlabelled_successes_quiet") do
+      cases = [[5, 4, 'save'], [5, 5, 'save'], [nil, 6, 'save'], [5, 6, nil]]
+      cases.each do |threshold, elapsed, label|
+        ActiveModel::Datastore.slow_operation_threshold = threshold
+        times = [0.0, elapsed]
+        assert_output('') do
+          Process.stub(:clock_gettime, ->(_) { times.shift }) do
+            assert_equal :success, MockModel.public_send(helper, operation: label) { :success }
+          end
+        end
+      end
+    end
+
+    define_method("test_#{helper}_measures_each_successful_retry_separately") do
+      [1.0, 6.0].each do |duration|
+        @delays.clear
+        attempts = 0
+        times = [0.0, 6.0, 10.0, 10.0 + duration]
+        output, = capture_io do
+          Process.stub(:clock_gettime, ->(_) { times.shift }) do
+            MockModel.stub(:sleep, ->(delay) { @delays << delay }) do
+              MockModel.public_send(helper, operation: 'save') do
+                attempts += 1
+                raise Google::Cloud::Error, 'retry error' if attempts == 1
+              end
+            end
+          end
+        end
+
+        assert_includes output, 'failed for MockModel after 6000 ms'
+        assert_equal duration > 5, output.include?('for MockModel took 6000 ms')
+        assert_equal duration > 5 ? 2 : 1, output.lines.size
+        assert_equal [0.25], @delays
+      end
+    end
+
     define_method("test_#{helper}_preserves_successful_values") do
       [nil, false, :success].each do |value|
         attempts = 0
@@ -224,6 +289,10 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
 
   def test_read_retry_count_defaults_to_five
     assert_equal 5, ActiveModel::Datastore.read_retry_count
+  end
+
+  def test_slow_operation_threshold_defaults_to_five
+    assert_equal 5, ActiveModel::Datastore.slow_operation_threshold
   end
 
   def test_find_entity_uses_configured_read_retry_count
