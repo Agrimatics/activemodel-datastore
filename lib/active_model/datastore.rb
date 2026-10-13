@@ -227,9 +227,8 @@ module ActiveModel::Datastore
 
     run_callbacks :save do
       entity = build_entity(parent)
-      next false unless preallocate_entity_id(entity)
-
-      success = self.class.retry_on_exception?(operation: 'save') do
+      success = preallocate_entity_id(entity)
+      success &&= self.class.retry_on_exception?(operation: 'save') do
         CloudDatastore.dataset.save entity
       end
       self.id = entity.key.id if success
