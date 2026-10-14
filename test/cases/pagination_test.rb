@@ -101,6 +101,18 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
+  def test_zero_limit_returns_the_batch_cursor_without_entities
+    start_cursor = Google::Cloud::Datastore::Cursor.from_grpc('after-2')
+    expect_batch([], limit: 0, cursor: 'after-2', more: :MORE_RESULTS_AFTER_LIMIT)
+
+    CloudDatastore.stub(:dataset, @dataset) do
+      models, cursor = MockModel.all(limit: 0, cursor: start_cursor.to_s)
+      assert_empty models
+      assert_equal start_cursor, cursor
+    end
+    @service.verify
+  end
+
   def test_query_without_a_limit_still_returns_all_models_across_batches
     expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
     expect_batch([3], limit: nil, cursor: 'after-2')
