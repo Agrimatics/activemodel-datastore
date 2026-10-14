@@ -413,8 +413,10 @@ module ActiveModel::Datastore
     ##
     # Translates an Enumerator of Datastore::Entity objects to ActiveModel::Model objects.
     #
-    # Results provided by the dataset `find_all` or `run query` will be a Dataset::LookupResults or
-    # Dataset::QueryResults object. Invoking `all` on those objects returns an enumerator.
+    # Within the gem, entities come from all_with_retries, which fetches each later batch of a
+    # lookup or unlimited query with retries, or from a page that `all(limit:)` has already read.
+    # Calling `all` on Dataset::LookupResults or Dataset::QueryResults also returns an enumerator,
+    # but fetches later batches without the gem's retries and timing.
     #
     # @param [Enumerator] entities An enumerator representing the datastore entities.
     #
