@@ -170,6 +170,23 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
+  def test_non_retryable_later_batch_error_gives_up_without_rereading_the_page
+    expect_batch([1, 2], limit: 4, more: :NOT_FINISHED)
+    expect_batch([], limit: 2, cursor: 'after-2') do
+      raise Google::Cloud::InvalidArgumentError, 'invalid cursor'
+    end
+
+    output = with_recorded_sleeps do
+      error = assert_raises(Google::Cloud::InvalidArgumentError) { MockModel.all(limit: 4) }
+      assert_equal 'invalid cursor', error.message
+    end
+
+    assert_equal ['Datastore run query failed for MockModel after 0 ms: "invalid cursor"; ' \
+                  'giving up after 1 attempts'], log_lines(output)
+    assert_empty @delays
+    @service.verify
+  end
+
   def test_retry_from_a_cursor_restarts_at_that_cursor_and_discards_partial_rows
     start_cursor = Google::Cloud::Datastore::Cursor.from_grpc('after-4').to_s
     expect_batch([5, 6], limit: 4, cursor: 'after-4', more: :NOT_FINISHED)

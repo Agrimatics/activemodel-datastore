@@ -345,8 +345,7 @@ module ActiveModel::Datastore
     #
     def all(options = {})
       unless options[:limit]
-        query = build_query(options)
-        query_results = retry_read('run query') { CloudDatastore.dataset.run query }
+        query_results = retry_read('run query') { CloudDatastore.dataset.run build_query(options) }
         return from_entities(query_results.all)
       end
 

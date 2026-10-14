@@ -88,7 +88,7 @@ Style/FetchEnvVar:
 
 Metrics/ModuleLength:
   CountComments: false
-  Max: 180
+  Max: 178
 
 Metrics/ClassLength:
   CountComments: false
