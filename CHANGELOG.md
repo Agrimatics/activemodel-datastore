@@ -2,6 +2,8 @@
 
 * fix `all(limit:)` returning a nil cursor for full pages split across Datastore response batches; use the final batch's end cursor
 * retry `all(limit:)` as a whole page, so a failure in any later Datastore response batch gets the configured `read_retry_count` retries and logging, and `slow_operation_threshold` times every batch of the page; each attempt rebuilds the query from the original options and discards rows from the failed attempt
+* retry each later batch of queries without a limit and each deferred lookup in `find` / `find_entities` with the configured `read_retry_count` and retry logging; one `slow_operation_threshold` warning covers the total time of the call's successful requests
+* raise `ActiveModel::Datastore::Error` instead of `NoMethodError` or `TypeError` if Datastore reports more query results without an end cursor
 * require Ruby 2.5 or newer and `google-cloud-datastore` 2.3.1 or later within 2.x for correct query limits across batches
 * warn when a successful Datastore attempt exceeds `ActiveModel::Datastore.slow_operation_threshold` (enabled by default at 5 seconds; `nil` or a blank string disables slow-success warnings)
 * add opt-in ID preallocation via `ActiveModel::Datastore.preallocate_ids` (disabled by default) to prevent duplicate entities when retrying a save; allocation is retried at most twice

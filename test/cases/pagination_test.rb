@@ -224,12 +224,244 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
+  def test_query_without_a_limit_gives_each_later_batch_its_own_retries
+    ActiveModel::Datastore.read_retry_count = 1
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
+    expect_unavailable(limit: nil, cursor: 'after-2')
+    expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED)
+    expect_unavailable(limit: nil, cursor: 'after-3')
+    expect_batch([4], limit: nil, cursor: 'after-3')
+
+    output = with_recorded_sleeps do
+      assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
+    end
+
+    failure = 'Datastore run query failed for MockModel after 0 ms: "unavailable"; ' \
+              'retrying in 0.25 s'
+    assert_equal [failure, failure], log_lines(output)
+    assert_equal [0.25, 0.25], @delays
+    @service.verify
+  end
+
+  def test_query_without_a_limit_raises_when_a_later_batch_keeps_failing
+    ActiveModel::Datastore.read_retry_count = 1
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
+    2.times { expect_unavailable(limit: nil, cursor: 'after-2') }
+
+    output = with_recorded_sleeps do
+      assert_raises(Google::Cloud::UnavailableError) { MockModel.all }
+    end
+
+    failure = 'Datastore run query failed for MockModel after 0 ms: "unavailable"; '
+    endings = ['retrying in 0.25 s', 'giving up after 2 attempts']
+    assert_equal(endings.map { |ending| failure + ending }, log_lines(output))
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
+  def test_query_without_a_limit_logs_one_slow_warning_for_all_batches
+    # Slow batches log once for the call, and fast batches add up past the threshold.
+    [[[1, 6, 7], 14_000], [[2, 2, 2], 6000]].each do |durations, total_ms|
+      clock = 0.0
+      expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += durations[0] }
+      expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED) do
+        clock += durations[1]
+      end
+      expect_batch([4], limit: nil, cursor: 'after-3') { clock += durations[2] }
+
+      output = with_recorded_sleeps(clock: ->(_) { clock }) do
+        assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
+      end
+
+      assert_equal ["Datastore run query for MockModel took #{total_ms} ms"], log_lines(output)
+    end
+    @service.verify
+  end
+
+  def test_find_logs_one_slow_warning_for_all_lookups
+    clock = 0.0
+    expect_lookup([1, 2, 3], found: [1], deferred: [2, 3]) { clock += 2 }
+    expect_lookup([2, 3], found: [2], deferred: [3]) { clock += 2 }
+    expect_lookup([3], found: [3]) { clock += 2 }
+
+    output = with_recorded_sleeps(clock: ->(_) { clock }) do
+      assert_equal [1, 2, 3], MockModel.find(1, 2, 3).map(&:id)
+    end
+
+    assert_equal ['Datastore find all for MockModel took 6000 ms'], log_lines(output)
+    @service.verify
+  end
+
+  def test_slow_warning_total_excludes_failed_attempts
+    clock = 0.0
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += 2 }
+    expect_batch([], limit: nil, cursor: 'after-2') do
+      clock += 4
+      raise Google::Cloud::UnavailableError, 'unavailable'
+    end
+    expect_batch([3], limit: nil, cursor: 'after-2') { clock += 2 }
+
+    output = with_recorded_sleeps(clock: ->(_) { clock }) do
+      assert_equal [1, 2, 3], MockModel.all.map(&:id)
+    end
+
+    assert_equal ['Datastore run query failed for MockModel after 4000 ms: "unavailable"; ' \
+                  'retrying in 0.25 s'], log_lines(output)
+    @service.verify
+  end
+
+  def test_batch_without_an_end_cursor_raises_instead_of_returning_partial_results
+    [nil, 4].each do |limit|
+      response = batch_response([1, 2], '', :NOT_FINISHED)
+      response.batch.end_cursor = ''
+      @service.expect(:run_query, response) { true }
+
+      output = with_recorded_sleeps do
+        error = assert_raises(ActiveModel::Datastore::Error) { MockModel.all(limit: limit) }
+        assert_equal 'Datastore run query for MockModel reported more results without an end ' \
+                     'cursor', error.message
+      end
+
+      assert_empty output
+    end
+    assert_empty @delays
+    @service.verify
+  end
+
+  def test_find_retries_only_the_failed_deferred_lookup
+    expect_lookup([1, 2, 3], found: [1], deferred: [2, 3])
+    expect_lookup([2, 3]) { raise Google::Cloud::UnavailableError, 'unavailable' }
+    expect_lookup([2, 3], found: [2, 3])
+
+    output = with_recorded_sleeps do
+      models = MockModel.find(1, 2, 3)
+      assert_equal [1, 2, 3], models.map(&:id)
+      assert(models.all?(MockModel))
+    end
+
+    assert_equal ['Datastore find all failed for MockModel after 0 ms: "unavailable"; ' \
+                  'retrying in 0.25 s'], log_lines(output)
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
+  def test_find_entities_raises_when_a_deferred_lookup_keeps_failing
+    ActiveModel::Datastore.read_retry_count = 1
+    expect_lookup([1, 2], found: [1], deferred: [2])
+    2.times { expect_lookup([2]) { raise Google::Cloud::UnavailableError, 'unavailable' } }
+
+    output = with_recorded_sleeps do
+      assert_raises(Google::Cloud::UnavailableError) { MockModel.find_entities(1, 2) }
+    end
+
+    failure = 'Datastore find all failed for MockModel after 0 ms: "unavailable"; '
+    endings = ['retrying in 0.25 s', 'giving up after 2 attempts']
+    assert_equal(endings.map { |ending| failure + ending }, log_lines(output))
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
+  def test_find_entities_returns_raw_entities_after_a_deferred_lookup_retry
+    expect_lookup([1, 2], found: [1], deferred: [2])
+    expect_lookup([2]) { raise Google::Cloud::UnavailableError, 'unavailable' }
+    expect_lookup([2], found: [2])
+
+    with_recorded_sleeps do
+      entities = MockModel.find_entities(1, 2)
+      assert_instance_of Array, entities
+      assert_equal([1, 2], entities.map { |entity| entity.key.id })
+      assert(entities.all?(Google::Cloud::Datastore::Entity))
+      assert_equal(%w[Entity1 Entity2], entities.map { |entity| entity['name'] })
+    end
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
+  def test_find_retries_a_repeatedly_deferred_lookup_and_skips_missing_keys
+    expect_lookup([1, 2, 3, 4], found: [1], missing: [2], deferred: [3, 4])
+    expect_lookup([3, 4], deferred: [3, 4])
+    expect_lookup([3, 4], found: [3], deferred: [4])
+    expect_lookup([4]) { raise Google::Cloud::UnavailableError, 'unavailable' }
+    expect_lookup([4], found: [4])
+
+    output = with_recorded_sleeps do
+      assert_equal [1, 3, 4], MockModel.find(1, 2, 3, 4).map(&:id)
+    end
+
+    assert_equal ['Datastore find all failed for MockModel after 0 ms: "unavailable"; ' \
+                  'retrying in 0.25 s'], log_lines(output)
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
+  def test_later_batches_make_no_extra_attempts_when_read_retry_count_is_zero
+    ActiveModel::Datastore.read_retry_count = 0
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
+    expect_unavailable(limit: nil, cursor: 'after-2')
+    expect_lookup([1, 2], found: [1], deferred: [2])
+    expect_lookup([2]) { raise Google::Cloud::UnavailableError, 'unavailable' }
+
+    output = with_recorded_sleeps do
+      assert_raises(Google::Cloud::UnavailableError) { MockModel.all }
+      assert_raises(Google::Cloud::UnavailableError) { MockModel.find_entities(1, 2) }
+    end
+
+    assert_equal ['run query', 'find all'].map { |operation|
+      "Datastore #{operation} failed for MockModel after 0 ms: \"unavailable\"; " \
+        'giving up after 1 attempts'
+    }, log_lines(output)
+    assert_empty @delays
+    @service.verify
+  end
+
+  def test_later_batches_do_not_retry_invalid_arguments_or_unrelated_errors
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
+    expect_batch([], limit: nil, cursor: 'after-2') do
+      raise Google::Cloud::InvalidArgumentError, 'invalid cursor'
+    end
+    expect_lookup([1, 2], found: [1], deferred: [2])
+    expect_lookup([2]) { raise ArgumentError, 'unrelated error' }
+
+    output = with_recorded_sleeps do
+      error = assert_raises(Google::Cloud::InvalidArgumentError) { MockModel.all }
+      assert_equal 'invalid cursor', error.message
+      error = assert_raises(ArgumentError) { MockModel.find(1, 2) }
+      assert_equal 'unrelated error', error.message
+    end
+
+    assert_equal ['Datastore run query failed for MockModel after 0 ms: "invalid cursor"; ' \
+                  'giving up after 1 attempts'], log_lines(output)
+    assert_empty @delays
+    @service.verify
+  end
+
+  def test_disabled_slow_threshold_keeps_failure_logs_for_later_batches
+    ActiveModel::Datastore.slow_operation_threshold = nil
+    clock = 0.0
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += 6 }
+    expect_batch([], limit: nil, cursor: 'after-2') do
+      clock += 6
+      raise Google::Cloud::UnavailableError, 'unavailable'
+    end
+    expect_batch([3], limit: nil, cursor: 'after-2') { clock += 6 }
+
+    output = with_recorded_sleeps(clock: ->(_) { clock }) do
+      assert_equal [1, 2, 3], MockModel.all.map(&:id)
+    end
+
+    assert_equal ['Datastore run query failed for MockModel after 6000 ms: "unavailable"; ' \
+                  'retrying in 0.25 s'], log_lines(output)
+    assert_equal [0.25], @delays
+    @service.verify
+  end
+
   private
 
-  # Freezes the clock so retry logs report 0 ms, and records backoff delays instead of sleeping.
-  def with_recorded_sleeps(&block)
+  # Records backoff delays instead of sleeping. The clock is frozen by default so retry logs
+  # report 0 ms; pass a callable to control it.
+  def with_recorded_sleeps(clock: 1.0, &block)
     output, = capture_io do
-      Process.stub(:clock_gettime, 1.0) do
+      Process.stub(:clock_gettime, clock) do
         MockModel.stub(:sleep, ->(delay) { @delays << delay }) do
           CloudDatastore.stub(:dataset, @dataset, &block)
         end
@@ -262,12 +494,29 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     end
   end
 
-  def batch_response(ids, start_cursor, more)
-    results = ids.map do |id|
-      entity = @dataset.entity('MockModel', id)
-      entity['name'] = "Entity#{id}"
-      { entity: entity.to_grpc, cursor: "after-#{id}" }
+  # Stubs one Lookup RPC for the given ids, returning found entities, missing keys, and deferred
+  # keys.
+  def expect_lookup(ids, found: [], missing: [], deferred: [])
+    response = Google::Cloud::Datastore::V1::LookupResponse.new(
+      found: found.map { |id| { entity: mock_entity(id).to_grpc } },
+      missing: missing.map { |id| { entity: @dataset.entity('MockModel', id).to_grpc } },
+      deferred: deferred.map { |id| @dataset.key('MockModel', id).to_grpc }
+    )
+    @service.expect(:lookup, response) do |*keys, **_options|
+      assert_equal(ids, keys.map { |key| key.path.last.id })
+      yield if block_given?
+      true
     end
+  end
+
+  def mock_entity(id)
+    entity = @dataset.entity('MockModel', id)
+    entity['name'] = "Entity#{id}"
+    entity
+  end
+
+  def batch_response(ids, start_cursor, more)
+    results = ids.map { |id| { entity: mock_entity(id).to_grpc, cursor: "after-#{id}" } }
     Google::Cloud::Datastore::V1::RunQueryResponse.new(
       batch: {
         entity_results: results,

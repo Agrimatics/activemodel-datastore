@@ -157,7 +157,8 @@ module ActiveModel::Datastore
 
   included do
     private_class_method :query_options, :query_sort, :query_property_filter, :find_all_entities,
-                         :retry_read, :log_retry_failure, :log_slow_operation
+                         :retry_read, :log_retry_failure, :log_slow_operation, :all_with_retries,
+                         :missing_cursor_error, :retry_with_backoff
     define_model_callbacks :save, :update, :destroy
     attr_accessor :id, :parent_key_id, :entity_property_values
   end
@@ -291,10 +292,9 @@ module ActiveModel::Datastore
     # additional values. LookupResults are returned in batches, and the batch size is
     # determined by the Datastore API. Batch size is not guaranteed. It will be affected
     # by the size of the data being returned, and by other forces such as how distributed
-    # and/or consistent the data in Datastore is. Calling `all` on the LookupResults retrieves
-    # all results by repeatedly loading #next until #next? returns false. The `all` method
-    # returns an enumerator unless passed a block. We iterate on the enumerator to return
-    # the model entity objects.
+    # and/or consistent the data in Datastore is. Deferred keys are retrieved by repeatedly
+    # loading #next until #next? returns false, retrying each request. We iterate on the
+    # resulting enumerator to return the model entity objects.
     #
     # @param [Integer, String] ids_or_names One or more ids to retrieve.
     # @param [Google::Cloud::Datastore::Key] parent The parent Key of the entity.
@@ -303,8 +303,7 @@ module ActiveModel::Datastore
     #
     def find_entities(*ids_or_names, parent: nil)
       ids_or_names = ids_or_names.flatten.compact.uniq
-      lookup_results = find_all_entities(ids_or_names, parent)
-      lookup_results.all.collect { |x| x }
+      find_all_entities(ids_or_names, parent).to_a
     end
 
     ##
@@ -319,8 +318,8 @@ module ActiveModel::Datastore
     # With a limit, batches are collected using #next? and #next, retaining the final batch's
     # end cursor for a full page. Short pages return a nil cursor. The whole page is retried as one
     # read, rebuilding the query from the original options so a retry never reuses the reduced
-    # limit or cursor of a partially read page. Without a limit, QueryResults#all returns an
-    # enumerator which from_entities iterates on to retrieve all batches.
+    # limit or cursor of a partially read page. Without a limit, from_entities iterates on an
+    # enumerator that retrieves all batches, retrying each request.
     #
     # Be sure to use as narrow a search criteria as possible. Please use with caution.
     #
@@ -345,8 +344,8 @@ module ActiveModel::Datastore
     #
     def all(options = {})
       unless options[:limit]
-        query_results = retry_read('run query') { CloudDatastore.dataset.run build_query(options) }
-        return from_entities(query_results.all)
+        query = build_query(options)
+        return from_entities(all_with_retries('run query') { CloudDatastore.dataset.run query })
       end
 
       # QueryResults#next lowers the shared query limit before each request, so every attempt
@@ -359,6 +358,7 @@ module ActiveModel::Datastore
           break unless query_results.next?
 
           query_results = query_results.next
+          raise missing_cursor_error('run query') unless query_results
         end
         [page, (query_results.cursor if page.size == options[:limit])]
       end
@@ -387,8 +387,7 @@ module ActiveModel::Datastore
         model_entity = from_entity(entity)
         expects_array ? [model_entity].compact : model_entity
       else
-        lookup_results = find_all_entities(ids, parent)
-        from_entities(lookup_results.all)
+        from_entities(find_all_entities(ids, parent))
       end
     end
 
@@ -416,8 +415,10 @@ module ActiveModel::Datastore
     ##
     # Translates an Enumerator of Datastore::Entity objects to ActiveModel::Model objects.
     #
-    # Results provided by the dataset `find_all` or `run query` will be a Dataset::LookupResults or
-    # Dataset::QueryResults object. Invoking `all` on those objects returns an enumerator.
+    # Within the gem, entities come from all_with_retries, which fetches each later batch of a
+    # lookup or unlimited query with retries, or from a page that `all(limit:)` has already read.
+    # Calling `all` on Dataset::LookupResults or Dataset::QueryResults also returns an enumerator,
+    # but fetches later batches without the gem's retries and timing.
     #
     # @param [Enumerator] entities An enumerator representing the datastore entities.
     #
@@ -467,36 +468,38 @@ module ActiveModel::Datastore
       query_options(query, options)
     end
 
-    def retry_on_exception?(max_retry_count = 5, operation: nil, kind: name)
-      retries = 0
-      sleep_time = 0.25
-      begin
-        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
-        result = yield
-        log_slow_operation(operation: operation, kind: kind, started_at: started_at)
-        result
-      rescue Google::Cloud::Error => e
-        giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
-        ending = "retrying in #{sleep_time}#{' s' if operation}"
-        ending = "giving up after #{retries + 1} attempts" if giving_up
-        log_retry_failure(e, ending, operation: operation, kind: kind, started_at: started_at)
-        return false if giving_up
-
-        # 0.25, 0.5, 1, 2, and 4 second between retries.
-        sleep sleep_time
-        retries += 1
-        sleep_time *= 2
-        retry
-      end
+    def retry_on_exception?(max_retry_count = 5, operation: nil, kind: name, &block)
+      retry_with_backoff(max_retry_count, operation: operation, kind: kind, &block)
+    rescue Google::Cloud::Error
+      # Only the error that ends the retries reaches here; it has already been logged.
+      false
     end
 
-    def retry_on_exception(max_retry_count = 5, operation: nil, kind: name)
+    def retry_on_exception(max_retry_count = 5, operation: nil, kind: name, &block)
+      retry_with_backoff(max_retry_count, operation: operation, kind: kind, &block)
+    end
+
+    def log_google_cloud_error
+      yield
+    rescue Google::Cloud::Error => e
+      puts "\e[33m[#{e.message.inspect}]\e[0m"
+      raise e
+    end
+
+    # **************** private ****************
+
+    ##
+    # Shared by retry_on_exception and retry_on_exception?. Reading every batch of a call passes
+    # warn_slow: false and logs one slow-operation warning for the call instead of one per request.
+    #
+    def retry_with_backoff(max_retry_count, operation:, kind:, warn_slow: true)
       retries = 0
       sleep_time = 0.25
       begin
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if operation
         result = yield
-        log_slow_operation(operation: operation, kind: kind, started_at: started_at)
+        log_slow_operation(operation: operation, kind: kind, started_at: started_at,
+                           warn_slow: warn_slow)
         result
       rescue Google::Cloud::Error => e
         giving_up = e.is_a?(Google::Cloud::InvalidArgumentError) || retries >= max_retry_count
@@ -513,20 +516,11 @@ module ActiveModel::Datastore
       end
     end
 
-    def log_google_cloud_error
-      yield
-    rescue Google::Cloud::Error => e
-      puts "\e[33m[#{e.message.inspect}]\e[0m"
-      raise e
-    end
-
-    # **************** private ****************
-
-    def log_slow_operation(operation:, kind:, started_at:)
+    def log_slow_operation(operation:, kind:, started_at: nil, elapsed: nil, warn_slow: true)
       threshold = ActiveModel::Datastore.slow_operation_threshold
-      return unless operation && threshold
+      return unless warn_slow && operation && threshold
 
-      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+      elapsed ||= Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
       return unless elapsed > threshold
 
       message = "\e[33mDatastore #{operation} for #{kind} took #{(elapsed * 1000).round} ms\e[0m"
@@ -546,6 +540,44 @@ module ActiveModel::Datastore
 
     def retry_read(operation, &block)
       retry_on_exception(ActiveModel::Datastore.read_retry_count, operation: operation, &block)
+    end
+
+    ##
+    # Like QueryResults#all and LookupResults#all for the results of the given first request, but
+    # retries each batch request separately. Only for results whose #next repeats the same request:
+    # lookups and queries without a limit. A limited query lowers its shared limit in #next, so
+    # #all retries the whole page instead.
+    #
+    # One slow-operation warning covers the call: the total time of its successful requests,
+    # excluding failed attempts and retry backoff, as for a page of #all with a limit.
+    #
+    def all_with_retries(operation, &first_request)
+      retries = ActiveModel::Datastore.read_retry_count
+      Enumerator.new do |entities|
+        elapsed = 0.0
+        batch = nil
+        loop do
+          batch = retry_with_backoff(retries, operation: operation, kind: name, warn_slow: false) do
+            started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            result = batch ? batch.next : first_request.call
+            elapsed += Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+            result
+          end
+          raise missing_cursor_error(operation) unless batch
+
+          batch.each { |entity| entities << entity }
+          break unless batch.next?
+        end
+        log_slow_operation(operation: operation, kind: name, elapsed: elapsed)
+      end
+    end
+
+    ##
+    # QueryResults#next returns nil when a batch reports more results without an end cursor.
+    # Datastore always sends one, so fail loudly rather than return incomplete results.
+    #
+    def missing_cursor_error(operation)
+      Error.new("Datastore #{operation} for #{name} reported more results without an end cursor")
     end
 
     def query_options(query, options)
@@ -588,15 +620,17 @@ module ActiveModel::Datastore
 
     ##
     # Finds entities by keys using the provided array items. Results provided by the
-    # dataset `find_all` is a Dataset::LookupResults object.
+    # dataset `find_all` is a Dataset::LookupResults object, which may defer some keys
+    # to later requests.
     #
     # @param [Array<Integer>, Array<String>] ids_or_names An array of ids or names.
     #
+    # @return [Enumerator] the found entities, including deferred ones.
     #
     def find_all_entities(ids_or_names, parent)
       keys = ids_or_names.map { |id| CloudDatastore.dataset.key name, id }
       keys.map { |key| key.parent = parent } if parent.present?
-      retry_read('find all') { CloudDatastore.dataset.find_all keys }
+      all_with_retries('find all') { CloudDatastore.dataset.find_all keys }
     end
 
     def build_model(entity)
