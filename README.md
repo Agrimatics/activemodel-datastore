@@ -91,9 +91,14 @@ ActiveModel::Datastore.logger = MyApplication.logger
 
 Successful attempts taking more than five seconds also log a warning, such as
 `Datastore save for Report took 6000 ms`. This measures each attempt separately, excluding retry
-backoff. Both retry helpers use this logging when an `operation:` label is provided. For paged
-queries and lookups, only the initial request is timed; later batches fetched lazily are outside
-the retry helpers. Configure the threshold in seconds during initialization:
+backoff. Both retry helpers use this logging when an `operation:` label is provided.
+
+`all(limit:)` retries and times the complete page, including all response batches. Each retry starts
+from the original query options and discards rows from the failed attempt. For queries without a
+limit and deferred-key lookups, only the initial request is covered by the gem's retry and timing
+helpers; later batches are fetched outside those helpers.
+
+Configure the threshold in seconds during initialization:
 
 ```ruby
 ActiveModel::Datastore.slow_operation_threshold = 2
