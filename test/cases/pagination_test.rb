@@ -224,18 +224,22 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
-  def test_query_without_a_limit_retries_only_the_failed_later_batch
+  def test_query_without_a_limit_gives_each_later_batch_its_own_retries
+    ActiveModel::Datastore.read_retry_count = 1
     expect_batch([1, 2], limit: nil, more: :NOT_FINISHED)
     expect_unavailable(limit: nil, cursor: 'after-2')
-    expect_batch([3], limit: nil, cursor: 'after-2')
+    expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED)
+    expect_unavailable(limit: nil, cursor: 'after-3')
+    expect_batch([4], limit: nil, cursor: 'after-3')
 
     output = with_recorded_sleeps do
-      assert_equal [1, 2, 3], MockModel.all.map(&:id)
+      assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
     end
 
-    assert_equal ['Datastore run query failed for MockModel after 0 ms: "unavailable"; ' \
-                  'retrying in 0.25 s'], log_lines(output)
-    assert_equal [0.25], @delays
+    failure = 'Datastore run query failed for MockModel after 0 ms: "unavailable"; ' \
+              'retrying in 0.25 s'
+    assert_equal [failure, failure], log_lines(output)
+    assert_equal [0.25, 0.25], @delays
     @service.verify
   end
 
@@ -258,17 +262,15 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
   def test_query_without_a_limit_times_each_later_batch
     clock = 0.0
     expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += 1 }
-    expect_batch([3], limit: nil, cursor: 'after-2') { clock += 6 }
+    expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED) { clock += 6 }
+    expect_batch([4], limit: nil, cursor: 'after-3') { clock += 7 }
 
-    output, = capture_io do
-      Process.stub(:clock_gettime, ->(_) { clock }) do
-        CloudDatastore.stub(:dataset, @dataset) do
-          assert_equal [1, 2, 3], MockModel.all.map(&:id)
-        end
-      end
+    output = with_recorded_sleeps(clock: ->(_) { clock }) do
+      assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
     end
 
-    assert_equal "\e[33mDatastore run query for MockModel took 6000 ms\e[0m\n", output
+    assert_equal ['Datastore run query for MockModel took 6000 ms',
+                  'Datastore run query for MockModel took 7000 ms'], log_lines(output)
     @service.verify
   end
 
@@ -305,20 +307,25 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
-  def test_find_entities_returns_found_and_deferred_entities
+  def test_find_entities_returns_raw_entities_after_a_deferred_lookup_retry
     expect_lookup([1, 2], found: [1], deferred: [2])
+    expect_lookup([2]) { raise Google::Cloud::UnavailableError, 'unavailable' }
     expect_lookup([2], found: [2])
 
-    CloudDatastore.stub(:dataset, @dataset) do
+    with_recorded_sleeps do
       entities = MockModel.find_entities(1, 2)
       assert_instance_of Array, entities
       assert_equal([1, 2], entities.map { |entity| entity.key.id })
+      assert(entities.all?(Google::Cloud::Datastore::Entity))
+      assert_equal(%w[Entity1 Entity2], entities.map { |entity| entity['name'] })
     end
+    assert_equal [0.25], @delays
     @service.verify
   end
 
   def test_find_retries_a_repeatedly_deferred_lookup_and_skips_missing_keys
     expect_lookup([1, 2, 3, 4], found: [1], missing: [2], deferred: [3, 4])
+    expect_lookup([3, 4], deferred: [3, 4])
     expect_lookup([3, 4], found: [3], deferred: [4])
     expect_lookup([4]) { raise Google::Cloud::UnavailableError, 'unavailable' }
     expect_lookup([4], found: [4])
@@ -362,8 +369,10 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     expect_lookup([2]) { raise ArgumentError, 'unrelated error' }
 
     output = with_recorded_sleeps do
-      assert_raises(Google::Cloud::InvalidArgumentError) { MockModel.all }
-      assert_raises(ArgumentError) { MockModel.find(1, 2) }
+      error = assert_raises(Google::Cloud::InvalidArgumentError) { MockModel.all }
+      assert_equal 'invalid cursor', error.message
+      error = assert_raises(ArgumentError) { MockModel.find(1, 2) }
+      assert_equal 'unrelated error', error.message
     end
 
     assert_equal ['Datastore run query failed for MockModel after 0 ms: "invalid cursor"; ' \
