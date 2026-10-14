@@ -341,14 +341,17 @@ module ActiveModel::Datastore
     #   can be used to query for additional results.
     #
     def all(options = {})
-      next_cursor = nil
       query = build_query(options)
       query_results = retry_read('run query') { CloudDatastore.dataset.run query }
-      if options[:limit]
-        next_cursor = query_results.cursor if query_results.size == options[:limit]
-        return from_entities(query_results.all), next_cursor
+      return from_entities(query_results.all) unless options[:limit]
+
+      next_cursor = nil
+      entities = query_results.all_with_cursor.map do |entity, cursor|
+        next_cursor = cursor
+        entity
       end
-      from_entities(query_results.all)
+      next_cursor = nil if entities.size < options[:limit]
+      [from_entities(entities.each), next_cursor]
     end
 
     ##
