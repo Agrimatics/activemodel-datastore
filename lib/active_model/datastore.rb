@@ -317,8 +317,10 @@ module ActiveModel::Datastore
     # Batch size is not guaranteed. It will be affected by the size of the data being returned,
     # and by other forces such as how distributed and/or consistent the data in Datastore is.
     # With a limit, batches are collected using #next? and #next, retaining the final batch's
-    # end cursor for a full page. Short pages return a nil cursor. Without a limit, QueryResults#all
-    # returns an enumerator which from_entities iterates on to retrieve all batches.
+    # end cursor for a full page. Short pages return a nil cursor. The whole page is retried as one
+    # read, rebuilding the query from the original options so a retry never reuses the reduced
+    # limit or cursor of a partially read page. Without a limit, QueryResults#all returns an
+    # enumerator which from_entities iterates on to retrieve all batches.
     #
     # Be sure to use as narrow a search criteria as possible. Please use with caution.
     #
@@ -342,18 +344,24 @@ module ActiveModel::Datastore
     #   can be used to query for additional results.
     #
     def all(options = {})
-      query = build_query(options)
-      query_results = retry_read('run query') { CloudDatastore.dataset.run query }
-      return from_entities(query_results.all) unless options[:limit]
-
-      entities = []
-      loop do
-        entities.concat(query_results)
-        break unless query_results.next?
-
-        query_results = query_results.next
+      unless options[:limit]
+        query_results = retry_read('run query') { CloudDatastore.dataset.run build_query(options) }
+        return from_entities(query_results.all)
       end
-      next_cursor = query_results.cursor if entities.size == options[:limit]
+
+      # QueryResults#next lowers the shared query limit before each request, so every attempt
+      # builds a fresh query and page from the original options.
+      entities, next_cursor = retry_read('run query') do
+        query_results = CloudDatastore.dataset.run build_query(options)
+        page = []
+        loop do
+          page.concat(query_results)
+          break unless query_results.next?
+
+          query_results = query_results.next
+        end
+        [page, (query_results.cursor if page.size == options[:limit])]
+      end
       [from_entities(entities.each), next_cursor]
     end
 
