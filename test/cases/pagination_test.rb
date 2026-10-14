@@ -37,6 +37,35 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
+  def test_single_batch_uses_end_cursor_when_entity_cursors_are_missing
+    expect_batch([1, 2], limit: 2, more: :MORE_RESULTS_AFTER_LIMIT, entity_cursors: false)
+
+    CloudDatastore.stub(:dataset, @dataset) do
+      models, cursor = MockModel.all(limit: 2)
+      assert_equal [1, 2], models.map(&:id)
+      assert_equal 'after-2', cursor&.to_grpc
+    end
+    @service.verify
+  end
+
+  def test_split_page_resumes_from_final_batch_when_entity_cursors_are_missing
+    expect_batch([1], limit: 2, more: :NOT_FINISHED, entity_cursors: false)
+    expect_batch([2], limit: 1, cursor: 'after-1', more: :MORE_RESULTS_AFTER_LIMIT,
+                      entity_cursors: false)
+    expect_batch([3], limit: 2, cursor: 'after-2', entity_cursors: false)
+
+    CloudDatastore.stub(:dataset, @dataset) do
+      first_page, cursor = MockModel.all(limit: 2)
+      assert_equal [1, 2], first_page.map(&:id)
+      assert_equal 'after-2', cursor&.to_grpc
+
+      last_page, last_cursor = MockModel.all(limit: 2, cursor: cursor.to_s)
+      assert_equal [1, 2, 3], (first_page + last_page).map(&:id)
+      assert_nil last_cursor
+    end
+    @service.verify
+  end
+
   def test_split_short_page_has_no_cursor
     expect_batch([1, 2], limit: 4, more: :NOT_FINISHED)
     expect_batch([3], limit: 2, cursor: 'after-2')
@@ -87,8 +116,9 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
 
   # Stub only the RPC responses: the real client follows NOT_FINISHED batches,
   # decodes entity cursors, and reduces the remaining limit on each request.
-  def expect_batch(ids, limit:, cursor: '', more: :NO_MORE_RESULTS)
+  def expect_batch(ids, limit:, cursor: '', more: :NO_MORE_RESULTS, entity_cursors: true)
     response = batch_response(ids, cursor, more)
+    response.batch.entity_results.each { |result| result.cursor = '' } unless entity_cursors
     @service.expect(:run_query, response) do |query, _namespace, **_options|
       assert_equal cursor, query.start_cursor
       limit.nil? ? assert_nil(query.limit) : assert_equal(limit, query.limit.value)

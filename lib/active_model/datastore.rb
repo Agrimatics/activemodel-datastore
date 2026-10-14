@@ -345,12 +345,14 @@ module ActiveModel::Datastore
       query_results = retry_read('run query') { CloudDatastore.dataset.run query }
       return from_entities(query_results.all) unless options[:limit]
 
-      next_cursor = nil
-      entities = query_results.all_with_cursor.map do |entity, cursor|
-        next_cursor = cursor
-        entity
+      entities = []
+      loop do
+        entities.concat(query_results)
+        break unless query_results.next?
+
+        query_results = query_results.next
       end
-      next_cursor = nil if entities.size < options[:limit]
+      next_cursor = query_results.cursor if entities.size == options[:limit]
       [from_entities(entities.each), next_cursor]
     end
 
