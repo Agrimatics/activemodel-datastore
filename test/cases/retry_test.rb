@@ -287,6 +287,16 @@ class ActiveModel::DatastoreRetryTest < Minitest::Test
     end
   end
 
+  def test_retry_on_exception_can_skip_the_slow_warning
+    times = [1.0, 7.0]
+    assert_output('') do
+      Process.stub(:clock_gettime, ->(_) { times.shift }) do
+        result = MockModel.retry_on_exception(operation: 'save', warn_slow: false) { :success }
+        assert_equal :success, result
+      end
+    end
+  end
+
   def test_read_retry_count_defaults_to_five
     assert_equal 5, ActiveModel::Datastore.read_retry_count
   end

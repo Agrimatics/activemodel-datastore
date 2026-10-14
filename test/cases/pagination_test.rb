@@ -259,18 +259,72 @@ class ActiveModel::DatastorePaginationTest < Minitest::Test
     @service.verify
   end
 
-  def test_query_without_a_limit_times_each_later_batch
+  def test_query_without_a_limit_logs_one_slow_warning_for_all_batches
+    # Slow batches log once for the call, and fast batches add up past the threshold.
+    [[[1, 6, 7], 14_000], [[2, 2, 2], 6000]].each do |durations, total_ms|
+      clock = 0.0
+      expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += durations[0] }
+      expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED) do
+        clock += durations[1]
+      end
+      expect_batch([4], limit: nil, cursor: 'after-3') { clock += durations[2] }
+
+      output = with_recorded_sleeps(clock: ->(_) { clock }) do
+        assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
+      end
+
+      assert_equal ["Datastore run query for MockModel took #{total_ms} ms"], log_lines(output)
+    end
+    @service.verify
+  end
+
+  def test_find_logs_one_slow_warning_for_all_lookups
     clock = 0.0
-    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += 1 }
-    expect_batch([3], limit: nil, cursor: 'after-2', more: :NOT_FINISHED) { clock += 6 }
-    expect_batch([4], limit: nil, cursor: 'after-3') { clock += 7 }
+    expect_lookup([1, 2, 3], found: [1], deferred: [2, 3]) { clock += 2 }
+    expect_lookup([2, 3], found: [2], deferred: [3]) { clock += 2 }
+    expect_lookup([3], found: [3]) { clock += 2 }
 
     output = with_recorded_sleeps(clock: ->(_) { clock }) do
-      assert_equal [1, 2, 3, 4], MockModel.all.map(&:id)
+      assert_equal [1, 2, 3], MockModel.find(1, 2, 3).map(&:id)
     end
 
-    assert_equal ['Datastore run query for MockModel took 6000 ms',
-                  'Datastore run query for MockModel took 7000 ms'], log_lines(output)
+    assert_equal ['Datastore find all for MockModel took 6000 ms'], log_lines(output)
+    @service.verify
+  end
+
+  def test_slow_warning_total_excludes_failed_attempts
+    clock = 0.0
+    expect_batch([1, 2], limit: nil, more: :NOT_FINISHED) { clock += 2 }
+    expect_batch([], limit: nil, cursor: 'after-2') do
+      clock += 4
+      raise Google::Cloud::UnavailableError, 'unavailable'
+    end
+    expect_batch([3], limit: nil, cursor: 'after-2') { clock += 2 }
+
+    output = with_recorded_sleeps(clock: ->(_) { clock }) do
+      assert_equal [1, 2, 3], MockModel.all.map(&:id)
+    end
+
+    assert_equal ['Datastore run query failed for MockModel after 4000 ms: "unavailable"; ' \
+                  'retrying in 0.25 s'], log_lines(output)
+    @service.verify
+  end
+
+  def test_batch_without_an_end_cursor_raises_instead_of_returning_partial_results
+    [nil, 4].each do |limit|
+      response = batch_response([1, 2], '', :NOT_FINISHED)
+      response.batch.end_cursor = ''
+      @service.expect(:run_query, response) { true }
+
+      output = with_recorded_sleeps do
+        error = assert_raises(ActiveModel::Datastore::Error) { MockModel.all(limit: limit) }
+        assert_equal 'Datastore run query for MockModel reported more results without an end ' \
+                     'cursor', error.message
+      end
+
+      assert_empty output
+    end
+    assert_empty @delays
     @service.verify
   end
 

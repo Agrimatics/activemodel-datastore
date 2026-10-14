@@ -97,8 +97,9 @@ backoff. Both retry helpers use this logging when an `operation:` label is provi
 from the original query options and discards rows from the failed attempt. A retry reads batches
 that already succeeded again, and because cursors don't preserve a snapshot, the retried page can
 include changes made between attempts. Queries without a limit and multi-key lookups (`find` with
-several IDs, `find_entities`) retry and time each request separately, so a retry reads only the
-batch that failed.
+several IDs, `find_entities`) retry each request separately, so a retry reads only the batch that
+failed. Their slow-operation warning covers the whole call: the total time of its successful
+requests, excluding failed attempts and retry backoff.
 
 Configure the threshold in seconds during initialization:
 
