@@ -1,5 +1,11 @@
-### Unreleased
+### 0.11.0 / 2026-10-14
 
+Upgrade notes:
+* requires `google-cloud-datastore` 2.3.1 or later; older versions will no longer resolve
+* `DATASTORE_NETWORK_TIMEOUT` is no longer read; it never took effect, so removing it from your environment changes nothing (see below for configuring per-RPC deadlines)
+* slow-operation warnings are enabled by default, so successful Datastore calls taking over 5 seconds now log at WARN level; set `ActiveModel::Datastore.slow_operation_threshold = nil` to keep the previous behavior
+
+Changes:
 * fix `all(limit:)` returning a nil cursor for full pages split across Datastore response batches; use the final batch's end cursor
 * retry `all(limit:)` as a whole page, so a failure in any later Datastore response batch gets the configured `read_retry_count` retries and logging, and `slow_operation_threshold` times every batch of the page; each attempt rebuilds the query from the original options and discards rows from the failed attempt
 * retry each later batch of queries without a limit and each deferred lookup in `find` / `find_entities` with the configured `read_retry_count` and retry logging; one `slow_operation_threshold` warning covers the total time of the call's successful requests
