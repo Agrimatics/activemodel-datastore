@@ -21,14 +21,14 @@ Gem::Specification.new do |gem|
     "bug_tracker_uri" => "https://github.com/Agrimatics/activemodel-datastore/issues"
   }
 
-  gem.required_ruby_version = '>= 2.2.2'
+  gem.required_ruby_version = '>= 2.5'
 
   gem.files         = Dir['CHANGELOG.md', 'README.md', 'LICENSE.txt', 'lib/**/*']
   gem.require_paths = ['lib']
 
   gem.add_runtime_dependency 'activemodel', '>= 5.0.0'
   gem.add_runtime_dependency 'activesupport', '>= 5.0.0'
-  gem.add_runtime_dependency 'google-cloud-datastore', '~> 2.0'
+  gem.add_runtime_dependency 'google-cloud-datastore', '~> 2.3', '>= 2.3.1'
 
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'actionpack', '>= 5.0.0'

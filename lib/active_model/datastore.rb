@@ -316,8 +316,9 @@ module ActiveModel::Datastore
     # QueryResults are returned in batches, and the batch size is determined by the Datastore API.
     # Batch size is not guaranteed. It will be affected by the size of the data being returned,
     # and by other forces such as how distributed and/or consistent the data in Datastore is.
-    # Calling `all` on the QueryResults retrieves all results by repeatedly loading #next until
-    # #next? returns false. The `all` method returns an enumerator which from_entities iterates on.
+    # With a limit, batches are collected using #next? and #next, retaining the final batch's
+    # end cursor for a full page. Short pages return a nil cursor. Without a limit, QueryResults#all
+    # returns an enumerator which from_entities iterates on to retrieve all batches.
     #
     # Be sure to use as narrow a search criteria as possible. Please use with caution.
     #
