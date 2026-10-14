@@ -1,5 +1,7 @@
 ### Unreleased
 
+* fix `all(limit:)` returning a nil cursor for full pages split across Datastore response batches; use the final batch's end cursor
+* require Ruby 2.5 or newer and `google-cloud-datastore` 2.3.1 or later within 2.x for correct query limits across batches
 * warn when a successful Datastore attempt exceeds `ActiveModel::Datastore.slow_operation_threshold` (enabled by default at 5 seconds; `nil` or a blank string disables slow-success warnings)
 * add opt-in ID preallocation via `ActiveModel::Datastore.preallocate_ids` (disabled by default) to prevent duplicate entities when retrying a save; allocation is retried at most twice
 * remove `DATASTORE_NETWORK_TIMEOUT`, which never took effect because the Datastore client's per-RPC 60-second deadlines override the client-wide timeout; set `Google::Cloud::Datastore::V1::Datastore::Client.configure { |c| c.rpcs.<rpc>.timeout = ... }` instead

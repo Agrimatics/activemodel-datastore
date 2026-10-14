@@ -316,8 +316,9 @@ module ActiveModel::Datastore
     # QueryResults are returned in batches, and the batch size is determined by the Datastore API.
     # Batch size is not guaranteed. It will be affected by the size of the data being returned,
     # and by other forces such as how distributed and/or consistent the data in Datastore is.
-    # Calling `all` on the QueryResults retrieves all results by repeatedly loading #next until
-    # #next? returns false. The `all` method returns an enumerator which from_entities iterates on.
+    # With a limit, batches are collected using #next? and #next, retaining the final batch's
+    # end cursor for a full page. Short pages return a nil cursor. Without a limit, QueryResults#all
+    # returns an enumerator which from_entities iterates on to retrieve all batches.
     #
     # Be sure to use as narrow a search criteria as possible. Please use with caution.
     #
@@ -341,14 +342,19 @@ module ActiveModel::Datastore
     #   can be used to query for additional results.
     #
     def all(options = {})
-      next_cursor = nil
       query = build_query(options)
       query_results = retry_read('run query') { CloudDatastore.dataset.run query }
-      if options[:limit]
-        next_cursor = query_results.cursor if query_results.size == options[:limit]
-        return from_entities(query_results.all), next_cursor
+      return from_entities(query_results.all) unless options[:limit]
+
+      entities = []
+      loop do
+        entities.concat(query_results)
+        break unless query_results.next?
+
+        query_results = query_results.next
       end
-      from_entities(query_results.all)
+      next_cursor = query_results.cursor if entities.size == options[:limit]
+      [from_entities(entities.each), next_cursor]
     end
 
     ##

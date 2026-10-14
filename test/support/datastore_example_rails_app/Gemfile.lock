@@ -4,7 +4,7 @@ PATH
     activemodel-datastore (0.10.0)
       activemodel (>= 5.0.0)
       activesupport (>= 5.0.0)
-      google-cloud-datastore (~> 2.0)
+      google-cloud-datastore (~> 2.3, >= 2.3.1)
 
 GEM
   remote: https://rubygems.org/
